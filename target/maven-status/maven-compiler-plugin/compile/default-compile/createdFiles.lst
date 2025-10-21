@@ -1,0 +1,7 @@
+com/mina/accesos/controller/AccessLogController.class
+com/mina/accesos/exception/NotFoundException.class
+com/mina/accesos/service/AccessLogService.class
+com/mina/accesos/domain/AccessLog.class
+com/mina/accesos/exception/GlobalExceptionHandler.class
+com/mina/accesos/ControlAccesosApiApplication.class
+com/mina/accesos/repository/AccessLogRepository.class

@@ -1,0 +1,7 @@
+/home/javier/Documentos/Proyecto/src/main/java/com/mina/accesos/repository/AccessLogRepository.java
+/home/javier/Documentos/Proyecto/src/main/java/com/mina/accesos/exception/GlobalExceptionHandler.java
+/home/javier/Documentos/Proyecto/src/main/java/com/mina/accesos/ControlAccesosApiApplication.java
+/home/javier/Documentos/Proyecto/src/main/java/com/mina/accesos/domain/AccessLog.java
+/home/javier/Documentos/Proyecto/src/main/java/com/mina/accesos/exception/NotFoundException.java
+/home/javier/Documentos/Proyecto/src/main/java/com/mina/accesos/service/AccessLogService.java
+/home/javier/Documentos/Proyecto/src/main/java/com/mina/accesos/controller/AccessLogController.java
