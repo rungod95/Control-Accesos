@@ -39,7 +39,7 @@ public class UserAccountController {
     }
 
     @GetMapping("/{id}")
-    public UserAccountResponse findById(@PathVariable Long id) {
+    public UserAccountResponse findById(@PathVariable("id") Long id) {
         return toResponse(userService.findById(id));
     }
 
@@ -52,7 +52,7 @@ public class UserAccountController {
     }
 
     @PutMapping("/{id}")
-    public UserAccountResponse update(@PathVariable Long id, @Valid @RequestBody UserAccountUpdateRequest request) {
+    public UserAccountResponse update(@PathVariable("id") Long id, @Valid @RequestBody UserAccountUpdateRequest request) {
         Role role = parseRole(request.role());
         UserAccount updated = userService.updateUser(id, request.fullName(), role, request.password());
         return toResponse(updated);
@@ -60,7 +60,7 @@ public class UserAccountController {
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void delete(@PathVariable Long id) {
+    public void delete(@PathVariable("id") Long id) {
         userService.deleteUser(id);
     }
 
