@@ -50,4 +50,8 @@ public abstract class IntegrationTestSupport {
     protected String obtainAdminToken() throws Exception {
         return obtainToken("admin", "admin123");
     }
+
+    protected String obtainWorkerToken() throws Exception {
+        return obtainToken("operario1", "operario123");
+    }
 }
