@@ -20,8 +20,8 @@ public class AccessLog {
     private String nombrePersona;
 
     @NotBlank
-    @Pattern(regexp = "trabajador|visitante", message = "tipoUsuario debe ser 'trabajador' o 'visitante'")
-    private String tipoUsuario; // trabajador / visitante
+    @Pattern(regexp = "trabajador|visitante|administrador", message = "tipoUsuario debe ser 'trabajador', 'visitante' o 'administrador'")
+    private String tipoUsuario; // trabajador / visitante / administrador
 
     private String motivo;
 
