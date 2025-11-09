@@ -15,3 +15,11 @@ export function fetchRecent(limit = 10) {
 export function searchAccessLogs(filters = {}) {
   return http.get('/api/accesos', { params: filters }).then((res) => res.data);
 }
+
+export function registerAccess(payload) {
+  return http.post('/api/accesos', payload).then((res) => res.data);
+}
+
+export function closeAccess(id, payload) {
+  return http.put(`/api/accesos/${id}`, payload).then((res) => res.data);
+}
