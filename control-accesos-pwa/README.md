@@ -17,6 +17,17 @@ npm run build        # genera artefactos de producción (dist/)
 npm run preview      # sirve la build para pruebas
 ```
 
+## Variables de entorno
+
+Copia `.env.example` a `.env` y ajusta la URL del backend si es necesario:
+
+```bash
+cp .env.example .env
+VITE_API_BASE_URL=http://localhost:8080
+```
+
+Los servicios (`axios`) utilizarán este valor para apuntar al Spring Boot.
+
 ## Próximos pasos sugeridos
 
 1. Conectar cada vista con la API (`control-accesos-api`) usando Axios y JWT almacenado de forma segura.

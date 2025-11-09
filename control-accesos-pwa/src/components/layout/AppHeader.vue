@@ -1,3 +1,22 @@
+<script setup>
+import { computed } from 'vue';
+import { useRouter } from 'vue-router';
+import { session } from '../../stores/session';
+import { logout } from '../../services/authService';
+
+const router = useRouter();
+const userLabel = computed(() => session.username.value || 'Invitado');
+
+function handleLogout() {
+  logout();
+  router.push({ name: 'login' });
+}
+
+function goLogin() {
+  router.push({ name: 'login' });
+}
+</script>
+
 <template>
   <header class="app-header">
     <div>
@@ -7,14 +26,24 @@
         Tres áreas autenticadas (trabajador, operador, administrador) y un flujo público para visitantes/contratistas.
       </p>
     </div>
-    <div class="app-tag">
-      <span>PWA Ready</span>
+    <div class="header-actions">
+      <div class="app-tag">
+        <span>PWA Ready</span>
+      </div>
+      <div class="session-panel" v-if="session.isAuthenticated.value">
+        <span class="user-chip">🔐 {{ userLabel }}</span>
+        <button type="button" @click="handleLogout">Salir</button>
+      </div>
+      <div class="session-panel" v-else>
+        <span class="user-chip">🔓 Invitado</span>
+        <button type="button" @click="goLogin">Iniciar sesión</button>
+      </div>
     </div>
   </header>
 </template>
 
 <style scoped>
-.app-header {
+ .app-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -42,6 +71,12 @@ h1 {
   max-width: 48rem;
 }
 
+.header-actions {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
 .app-tag {
   background: rgba(15, 118, 110, 0.15);
   border: 1px solid rgba(52, 211, 153, 0.4);
@@ -50,6 +85,31 @@ h1 {
   border-radius: 999px;
   font-size: 0.85rem;
   white-space: nowrap;
+}
+
+.session-panel {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.user-chip {
+  padding: 0.3rem 0.8rem;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.15);
+}
+
+button {
+  background: transparent;
+  border: 1px solid rgba(148, 163, 184, 0.5);
+  color: inherit;
+  padding: 0.35rem 0.75rem;
+  border-radius: 0.6rem;
+  cursor: pointer;
+}
+
+button:hover {
+  border-color: rgba(59, 130, 246, 0.7);
 }
 
 @media (max-width: 768px) {

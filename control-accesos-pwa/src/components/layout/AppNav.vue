@@ -1,4 +1,5 @@
 <script setup>
+import { RouterLink } from 'vue-router';
 import { roles } from '../../constants/roles';
 </script>
 
