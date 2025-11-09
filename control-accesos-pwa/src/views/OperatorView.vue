@@ -1,7 +1,7 @@
 <script setup>
 import { ref, watch } from 'vue';
 import RoleSection from '../components/RoleSection.vue';
-import { fetchSummary, fetchActive } from '../services/accessLogService';
+import { fetchSummary, fetchActive, closeAccess } from '../services/accessLogService';
 import { useSession } from '../stores/session';
 import { useUi } from '../stores/ui';
 
@@ -19,6 +19,7 @@ const checklist = [
 
 const summary = ref(null);
 const active = ref([]);
+const closeForm = ref({ accessId: '' });
 const loading = ref(false);
 const error = ref('');
 
@@ -53,6 +54,23 @@ async function loadData({ silent = false } = {}) {
   }
 }
 
+async function handleClose() {
+  if (!closeForm.value.accessId) {
+    ui.notifyWarning('Selecciona un acceso para cerrarlo.');
+    return;
+  }
+  try {
+    await closeAccess(closeForm.value.accessId, {
+      fechaHoraSalida: new Date().toISOString(),
+    });
+    ui.notifySuccess('Acceso cerrado correctamente');
+    closeForm.value.accessId = '';
+    await loadData({ silent: true });
+  } catch (err) {
+    ui.notifyError('No se pudo cerrar el acceso.');
+  }
+}
+
 watch(
   () => session.isAuthenticated.value,
   () => loadData({ silent: true }),
@@ -73,6 +91,15 @@ watch(
   <section class="operator-panel">
     <div class="toolbar" v-if="session.isAuthenticated.value">
       <button type="button" @click="loadData()">Refrescar tablero</button>
+      <div class="close-inline">
+        <select v-model="closeForm.accessId">
+          <option value="" disabled>Selecciona acceso</option>
+          <option v-for="item in active" :key="item.id" :value="item.id">
+            {{ item.nombrePersona }} · {{ item.fechaHoraEntrada }}
+          </option>
+        </select>
+        <button type="button" class="close-btn" @click="handleClose">Cerrar acceso</button>
+      </div>
     </div>
     <p v-if="loading">Cargando tablero...</p>
     <p v-else-if="error" class="error">{{ error }}</p>
@@ -132,6 +159,7 @@ watch(
   display: flex;
   justify-content: flex-end;
   margin-bottom: 1rem;
+  gap: 1rem;
 }
 
 .toolbar button {
@@ -145,6 +173,29 @@ watch(
 
 .toolbar button:hover {
   border-color: rgba(34, 197, 94, 0.8);
+}
+
+.close-inline {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.close-inline select {
+  background: transparent;
+  color: inherit;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  border-radius: 0.6rem;
+  padding: 0.35rem 0.6rem;
+}
+
+.close-btn {
+  border-color: rgba(248, 113, 113, 0.5);
+  color: #fecaca;
+}
+
+.close-btn:hover {
+  border-color: rgba(248, 113, 113, 0.8);
 }
 
 .grid {

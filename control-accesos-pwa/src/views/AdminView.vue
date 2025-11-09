@@ -2,6 +2,7 @@
 import { ref, watch } from 'vue';
 import RoleSection from '../components/RoleSection.vue';
 import { fetchUsers } from '../services/userService';
+import { fetchActive, closeAccess } from '../services/accessLogService';
 import { useSession } from '../stores/session';
 import { useUi } from '../stores/ui';
 
@@ -18,22 +19,29 @@ const checklist = [
 ];
 
 const users = ref([]);
+const activeAccesses = ref([]);
 const loading = ref(false);
 const error = ref('');
 
 const session = useSession();
 const ui = useUi();
 
-async function loadUsers({ silent = false } = {}) {
+async function loadData({ silent = false } = {}) {
   if (!session.isAuthenticated.value) {
     users.value = [];
+    activeAccesses.value = [];
     return;
   }
 
   loading.value = true;
   error.value = '';
   try {
-    users.value = await fetchUsers();
+    const [userList, accessList] = await Promise.all([
+      fetchUsers(),
+      fetchActive(),
+    ]);
+    users.value = userList;
+    activeAccesses.value = accessList;
     if (!silent) {
       ui.notifySuccess('Usuarios sincronizados');
     }
@@ -48,9 +56,19 @@ async function loadUsers({ silent = false } = {}) {
 
 watch(
   () => session.isAuthenticated.value,
-  () => loadUsers({ silent: true }),
+  () => loadData({ silent: true }),
   { immediate: true },
 );
+
+async function handleClose(id) {
+  try {
+    await closeAccess(id, { fechaHoraSalida: new Date().toISOString() });
+    ui.notifySuccess('Acceso cerrado');
+    await loadData({ silent: true });
+  } catch (err) {
+    ui.notifyError('No se pudo cerrar el acceso');
+  }
+}
 </script>
 
 <template>
@@ -65,7 +83,7 @@ watch(
 
   <section class="admin-table">
     <div class="toolbar" v-if="session.isAuthenticated.value">
-      <button type="button" @click="loadUsers()">Actualizar usuarios</button>
+      <button type="button" @click="loadData()">Actualizar datos</button>
     </div>
     <p v-if="loading">Cargando usuarios...</p>
     <p v-else-if="error" class="error">{{ error }}</p>
@@ -96,6 +114,32 @@ watch(
     <p v-if="!loading && !error && users.length === 0" class="empty">
       No hay usuarios registrados.
     </p>
+  </section>
+
+  <section class="admin-table" v-if="activeAccesses.length">
+    <h3>Accesos abiertos</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Persona</th>
+          <th>Tipo</th>
+          <th>Entrada</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr v-for="access in activeAccesses" :key="access.id">
+          <td>{{ access.nombrePersona }}</td>
+          <td class="badge">{{ access.tipoUsuario }}</td>
+          <td>{{ access.fechaHoraEntrada }}</td>
+          <td>
+            <button type="button" class="close-btn" @click="handleClose(access.id)">
+              Cerrar
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
   </section>
 </template>
 
@@ -164,6 +208,18 @@ tbody tr {
 .pill.danger {
   background: rgba(248, 113, 113, 0.2);
   color: #fecaca;
+}
+
+.close-btn {
+  border: 1px solid rgba(248, 113, 113, 0.6);
+  background: transparent;
+  color: #fecaca;
+  padding: 0.35rem 0.7rem;
+  border-radius: 0.6rem;
+}
+
+.close-btn:hover {
+  border-color: rgba(248, 113, 113, 0.9);
 }
 
 .empty {
