@@ -237,6 +237,7 @@ watch(() => scanner.lastResult.value, handleScannerResult);
   <section class="worker-data">
     <div class="toolbar" v-if="session.isAuthenticated.value">
       <button type="button" @click="loadData()">Actualizar datos</button>
+      <button type="button" @click="flushQueue(sendAccess)" :disabled="syncing">Sincronizar pendientes</button>
     </div>
     <p v-if="loading">Cargando datos...</p>
     <p v-else-if="error" class="error">{{ error }}</p>

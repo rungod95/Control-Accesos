@@ -84,6 +84,7 @@ async function handleClose(id) {
   <section class="admin-table">
     <div class="toolbar" v-if="session.isAuthenticated.value">
       <button type="button" @click="loadData()">Actualizar datos</button>
+      <button type="button" @click="flushQueue(sendAccess)">Sincronizar pendientes</button>
     </div>
     <p v-if="loading">Cargando usuarios...</p>
     <p v-else-if="error" class="error">{{ error }}</p>

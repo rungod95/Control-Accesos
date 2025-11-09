@@ -91,6 +91,7 @@ watch(
   <section class="operator-panel">
     <div class="toolbar" v-if="session.isAuthenticated.value">
       <button type="button" @click="loadData()">Refrescar tablero</button>
+      <button type="button" @click="flushQueue(sendAccess)">Sincronizar pendientes</button>
       <div class="close-inline">
         <select v-model="closeForm.accessId">
           <option value="" disabled>Selecciona acceso</option>
