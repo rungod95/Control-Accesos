@@ -1,25 +1,30 @@
 <script setup>
 import { RouterLink, useRoute } from 'vue-router';
-import { roles } from '../../constants/roles';
 
 const route = useRoute();
 
-const isActive = (target) => route.path.startsWith(target);
+const links = [
+  { path: '/', label: 'Inicio', subtitle: 'Resumen general', emoji: '🏠' },
+  { path: '/qr', label: 'Visitante', subtitle: 'QR temporal', emoji: '👋' },
+  { path: '/login', label: 'Acceso', subtitle: 'Autenticación', emoji: '🔐' },
+];
+
+const isActive = (target) => route.path === target;
 </script>
 
 <template>
   <nav class="app-nav">
     <RouterLink
-      v-for="role in roles"
-      :key="role.id"
+      v-for="link in links"
+      :key="link.path"
       class="nav-link"
-      :class="{ 'nav-link--active': isActive(role.route) }"
-      :to="role.route"
+      :class="{ 'nav-link--active': isActive(link.path) }"
+      :to="link.path"
     >
-      <span class="emoji">{{ role.emoji }}</span>
+      <span class="emoji">{{ link.emoji }}</span>
       <span class="text">
-        <strong>{{ role.name }}</strong>
-        <small>{{ role.access }}</small>
+        <strong>{{ link.label }}</strong>
+        <small>{{ link.subtitle }}</small>
       </span>
     </RouterLink>
   </nav>
@@ -54,6 +59,7 @@ const isActive = (target) => route.path.startsWith(target);
 .nav-link--active {
   border-color: rgba(16, 185, 129, 0.8);
   background: rgba(16, 185, 129, 0.08);
+  box-shadow: 0 10px 20px rgba(16, 185, 129, 0.25);
 }
 
 .emoji {
