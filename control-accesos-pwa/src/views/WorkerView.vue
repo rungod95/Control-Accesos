@@ -1,7 +1,7 @@
 <script setup>
 import { ref, watch, onMounted, onBeforeUnmount } from 'vue';
 import RoleSection from '../components/RoleSection.vue';
-import { fetchSummary, fetchRecent, registerAccess } from '../services/accessLogService';
+import { fetchSummary, fetchRecent, fetchActive, registerAccess, closeAccess } from '../services/accessLogService';
 import { useSession } from '../stores/session';
 import { useUi } from '../stores/ui';
 import { useQrScanner } from '../composables/useQrScanner';
@@ -21,6 +21,7 @@ const checklist = [
 
 const summary = ref(null);
 const recent = ref([]);
+const activeOpen = ref([]);
 const loading = ref(false);
 const error = ref('');
 
@@ -31,6 +32,10 @@ const scanner = useQrScanner();
 const registerForm = ref({
   motivo: '',
   qrCode: '',
+});
+
+const closeForm = ref({
+  accessId: '',
 });
 
 const syncing = ref(false);
@@ -45,12 +50,14 @@ async function loadData({ silent = false } = {}) {
   loading.value = true;
   error.value = '';
   try {
-    const [summaryData, recentData] = await Promise.all([
+    const [summaryData, recentData, activeData] = await Promise.all([
       fetchSummary(),
       fetchRecent(5),
+      fetchActive(),
     ]);
     summary.value = summaryData;
     recent.value = recentData;
+    activeOpen.value = activeData;
     if (!silent) {
       ui.notifySuccess('Resumen de accesos actualizado');
     }
@@ -69,9 +76,14 @@ watch(
   { immediate: true },
 );
 
-async function sendAccess(payload) {
-  await registerAccess(payload);
-  ui.notifySuccess('Acceso registrado correctamente');
+async function sendAccess(entry) {
+  if (entry.action === 'create') {
+    await registerAccess(entry.payload);
+    ui.notifySuccess('Acceso registrado correctamente');
+  } else if (entry.action === 'close') {
+    await closeAccess(entry.payload.id, entry.payload.body);
+    ui.notifySuccess('Salida registrada correctamente');
+  }
 }
 
 async function handleRegister() {
@@ -87,16 +99,45 @@ async function handleRegister() {
     fechaHoraEntrada: new Date().toISOString(),
   };
 
+  const entry = { action: 'create', payload };
+
   if (navigator.onLine) {
     try {
-      await sendAccess(payload);
+      await sendAccess(entry);
       registerForm.value.motivo = '';
     } catch (err) {
       ui.notifyError('No se pudo registrar el acceso, se guardará offline.');
-      await addPending(payload);
+      await addPending(entry);
     }
   } else {
-    await addPending(payload);
+    await addPending(entry);
+  }
+}
+
+async function handleClose() {
+  if (!closeForm.value.accessId) {
+    ui.notifyWarning('Selecciona el acceso que quieres cerrar.');
+    return;
+  }
+  const payload = {
+    id: closeForm.value.accessId,
+    body: {
+      fechaHoraSalida: new Date().toISOString(),
+    },
+  };
+  const entry = { action: 'close', payload };
+
+  if (navigator.onLine) {
+    try {
+      await sendAccess(entry);
+      closeForm.value.accessId = '';
+      await loadData({ silent: true });
+    } catch (err) {
+      ui.notifyError('No se pudo cerrar el acceso, se guardará offline.');
+      await addPending(entry);
+    }
+  } else {
+    await addPending(entry);
   }
 }
 
@@ -173,6 +214,23 @@ watch(() => scanner.lastResult.value, handleScannerResult);
       <p v-if="offlineQueue.state.pending.length" class="warning">
         {{ offlineQueue.state.pending.length }} acceso(s) pendiente(s) por sincronizar.
       </p>
+    </form>
+
+    <form class="close-form" @submit.prevent="handleClose">
+      <label>
+        Accesos abiertos
+        <select v-model="closeForm.accessId">
+          <option value="" disabled>Selecciona un acceso</option>
+          <option
+            v-for="item in activeOpen"
+            :key="item.id"
+            :value="item.id"
+          >
+            {{ item.nombrePersona }} · {{ item.fechaHoraEntrada }}
+          </option>
+        </select>
+      </label>
+      <button type="submit">Registrar salida</button>
     </form>
   </section>
 
@@ -311,7 +369,8 @@ watch(() => scanner.lastResult.value, handleScannerResult);
 }
 
 .scanner-box,
-.register-form {
+.register-form,
+.close-form {
   background: rgba(15, 23, 42, 0.65);
   border: 1px solid rgba(148, 163, 184, 0.2);
   border-radius: 1.25rem;
@@ -348,13 +407,20 @@ input {
   gap: 0.8rem;
 }
 
-.register-form button {
+.register-form button,
+.close-form button {
   border: 1px solid rgba(34, 197, 94, 0.5);
   background: transparent;
   color: #bbf7d0;
   padding: 0.5rem 0.8rem;
   border-radius: 0.75rem;
   cursor: pointer;
+}
+
+.close-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
 }
 
 .warning {

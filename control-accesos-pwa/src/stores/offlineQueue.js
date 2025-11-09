@@ -18,23 +18,23 @@ export async function loadQueue() {
   state.pending = Array.isArray(data) ? data : [];
 }
 
-export async function addPending(item) {
-  state.pending.push(item);
+export async function addPending(entry) {
+  state.pending.push(entry);
   await localforage.setItem(STORAGE_NAME, state.pending);
-  ui.notifyWarning('Acceso almacenado offline; se enviará al recuperar conexión.');
+  ui.notifyWarning('Operación almacenada offline; se enviará al recuperar conexión.');
 }
 
-export async function flushQueue(sendFn) {
+export async function flushQueue(handler) {
   if (state.pending.length === 0) {
     return;
   }
   const copy = [...state.pending];
   for (const entry of copy) {
     try {
-      await sendFn(entry);
+      await handler(entry);
       state.pending.shift();
       await localforage.setItem(STORAGE_NAME, state.pending);
-      ui.notifySuccess('Acceso pendiente sincronizado.');
+      ui.notifySuccess('Operación offline sincronizada.');
     } catch (err) {
       break;
     }
