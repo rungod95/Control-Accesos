@@ -3,6 +3,7 @@ import { ref, watch } from 'vue';
 import RoleSection from '../components/RoleSection.vue';
 import { fetchSummary, fetchActive } from '../services/accessLogService';
 import { useSession } from '../stores/session';
+import { useUi } from '../stores/ui';
 
 const actions = [
   'Panel en tiempo real con accesos activos',
@@ -22,8 +23,9 @@ const loading = ref(false);
 const error = ref('');
 
 const session = useSession();
+const ui = useUi();
 
-async function loadData() {
+async function loadData({ silent = false } = {}) {
   if (!session.isAuthenticated.value) {
     summary.value = null;
     active.value = [];
@@ -39,6 +41,9 @@ async function loadData() {
     ]);
     summary.value = summaryData;
     active.value = activeData;
+    if (!silent) {
+      ui.notifySuccess('Panel del operador actualizado');
+    }
   } catch (err) {
     error.value = err.response?.status === 403
       ? 'Este usuario no tiene permisos de operador.'
@@ -50,7 +55,7 @@ async function loadData() {
 
 watch(
   () => session.isAuthenticated.value,
-  () => loadData(),
+  () => loadData({ silent: true }),
   { immediate: true },
 );
 </script>
@@ -66,6 +71,9 @@ watch(
   />
 
   <section class="operator-panel">
+    <div class="toolbar" v-if="session.isAuthenticated.value">
+      <button type="button" @click="loadData()">Refrescar tablero</button>
+    </div>
     <p v-if="loading">Cargando tablero...</p>
     <p v-else-if="error" class="error">{{ error }}</p>
 
@@ -118,6 +126,25 @@ watch(
   border-radius: 1.25rem;
   border: 1px solid rgba(148, 163, 184, 0.2);
   padding: 1.5rem;
+}
+
+.toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 1rem;
+}
+
+.toolbar button {
+  border: 1px solid rgba(34, 197, 94, 0.5);
+  background: transparent;
+  color: #bbf7d0;
+  padding: 0.4rem 0.8rem;
+  border-radius: 0.75rem;
+  cursor: pointer;
+}
+
+.toolbar button:hover {
+  border-color: rgba(34, 197, 94, 0.8);
 }
 
 .grid {

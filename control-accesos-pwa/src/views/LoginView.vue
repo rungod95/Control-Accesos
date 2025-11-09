@@ -3,6 +3,7 @@ import { ref } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { login } from '../services/authService';
 import { session } from '../stores/session';
+import { useUi } from '../stores/ui';
 
 const form = ref({
   username: '',
@@ -14,18 +15,21 @@ const error = ref('');
 
 const router = useRouter();
 const route = useRoute();
+const ui = useUi();
 
 async function handleSubmit() {
   error.value = '';
   loading.value = true;
   try {
     await login(form.value);
+    ui.notifySuccess(`Bienvenido, ${form.value.username}!`);
     const redirectTo = route.query.redirect ?? '/';
     router.replace(redirectTo);
   } catch (err) {
     error.value = err.response?.status === 401
       ? 'Credenciales inválidas'
       : 'No fue posible iniciar sesión';
+    ui.notifyError(error.value);
     session.clear();
   } finally {
     loading.value = false;

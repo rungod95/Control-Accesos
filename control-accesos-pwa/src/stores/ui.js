@@ -35,12 +35,21 @@ function notify({ type = 'info', message }) {
   setTimeout(() => removeToast(id), TOAST_TIMEOUT);
 }
 
+const notifyInfo = (message) => notify({ type: 'info', message });
+const notifySuccess = (message) => notify({ type: 'success', message });
+const notifyWarning = (message) => notify({ type: 'warning', message });
+const notifyError = (message) => notify({ type: 'error', message });
+
 export const ui = {
   isLoading: computed(() => state.pendingRequests > 0),
   toasts: computed(() => state.toasts),
   startLoading,
   stopLoading,
   notify,
+  notifyInfo,
+  notifySuccess,
+  notifyWarning,
+  notifyError,
   removeToast,
 };
 

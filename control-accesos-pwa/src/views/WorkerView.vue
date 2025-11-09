@@ -3,6 +3,7 @@ import { ref, watch } from 'vue';
 import RoleSection from '../components/RoleSection.vue';
 import { fetchSummary, fetchRecent } from '../services/accessLogService';
 import { useSession } from '../stores/session';
+import { useUi } from '../stores/ui';
 
 const actions = [
   'Login JWT y refresco del token',
@@ -22,8 +23,9 @@ const loading = ref(false);
 const error = ref('');
 
 const session = useSession();
+const ui = useUi();
 
-async function loadData() {
+async function loadData({ silent = false } = {}) {
   if (!session.isAuthenticated.value) {
     summary.value = null;
     recent.value = [];
@@ -39,6 +41,9 @@ async function loadData() {
     ]);
     summary.value = summaryData;
     recent.value = recentData;
+    if (!silent) {
+      ui.notifySuccess('Resumen de accesos actualizado');
+    }
   } catch (err) {
     error.value = err.response?.status === 403
       ? 'Tu rol no tiene acceso a los datos de accesos.'
@@ -50,9 +55,7 @@ async function loadData() {
 
 watch(
   () => session.isAuthenticated.value,
-  () => {
-    loadData();
-  },
+  () => loadData({ silent: true }),
   { immediate: true },
 );
 </script>
@@ -68,6 +71,9 @@ watch(
   />
 
   <section class="worker-data">
+    <div class="toolbar" v-if="session.isAuthenticated.value">
+      <button type="button" @click="loadData()">Actualizar datos</button>
+    </div>
     <p v-if="loading">Cargando datos...</p>
     <p v-else-if="error" class="error">{{ error }}</p>
 
@@ -108,6 +114,25 @@ watch(
   border: 1px solid rgba(148, 163, 184, 0.2);
   border-radius: 1.25rem;
   padding: 1.5rem;
+}
+
+.toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 1rem;
+}
+
+.toolbar button {
+  border: 1px solid rgba(59, 130, 246, 0.5);
+  background: transparent;
+  color: #bfdbfe;
+  padding: 0.4rem 0.8rem;
+  border-radius: 0.75rem;
+  cursor: pointer;
+}
+
+.toolbar button:hover {
+  border-color: rgba(59, 130, 246, 0.8);
 }
 
 .widgets {

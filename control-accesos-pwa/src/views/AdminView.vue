@@ -3,6 +3,7 @@ import { ref, watch } from 'vue';
 import RoleSection from '../components/RoleSection.vue';
 import { fetchUsers } from '../services/userService';
 import { useSession } from '../stores/session';
+import { useUi } from '../stores/ui';
 
 const actions = [
   'Gestión de usuarios, roles y permisos',
@@ -21,8 +22,9 @@ const loading = ref(false);
 const error = ref('');
 
 const session = useSession();
+const ui = useUi();
 
-async function loadUsers() {
+async function loadUsers({ silent = false } = {}) {
   if (!session.isAuthenticated.value) {
     users.value = [];
     return;
@@ -32,6 +34,9 @@ async function loadUsers() {
   error.value = '';
   try {
     users.value = await fetchUsers();
+    if (!silent) {
+      ui.notifySuccess('Usuarios sincronizados');
+    }
   } catch (err) {
     error.value = err.response?.status === 403
       ? 'Sólo el rol ADMIN puede consultar usuarios.'
@@ -43,7 +48,7 @@ async function loadUsers() {
 
 watch(
   () => session.isAuthenticated.value,
-  () => loadUsers(),
+  () => loadUsers({ silent: true }),
   { immediate: true },
 );
 </script>
@@ -59,6 +64,9 @@ watch(
   />
 
   <section class="admin-table">
+    <div class="toolbar" v-if="session.isAuthenticated.value">
+      <button type="button" @click="loadUsers()">Actualizar usuarios</button>
+    </div>
     <p v-if="loading">Cargando usuarios...</p>
     <p v-else-if="error" class="error">{{ error }}</p>
 
@@ -98,6 +106,25 @@ watch(
   border-radius: 1.25rem;
   border: 1px solid rgba(148, 163, 184, 0.25);
   padding: 1.5rem;
+}
+
+.toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 1rem;
+}
+
+.toolbar button {
+  border: 1px solid rgba(168, 85, 247, 0.5);
+  background: transparent;
+  color: #e9d5ff;
+  padding: 0.4rem 0.8rem;
+  border-radius: 0.75rem;
+  cursor: pointer;
+}
+
+.toolbar button:hover {
+  border-color: rgba(168, 85, 247, 0.8);
 }
 
 table {
