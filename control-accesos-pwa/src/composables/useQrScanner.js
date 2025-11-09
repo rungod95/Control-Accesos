@@ -1,9 +1,28 @@
 import { ref, onMounted, onBeforeUnmount } from 'vue';
-import { BrowserMultiFormatReader } from '@zxing/browser';
 import { ui } from '../stores/ui';
 
+let BrowserMultiFormatReaderClass;
+
+async function getReader() {
+  if (!BrowserMultiFormatReaderClass) {
+    const module = await import('@zxing/browser');
+    BrowserMultiFormatReaderClass = module.BrowserMultiFormatReader;
+  }
+  return new BrowserMultiFormatReaderClass();
+}
+
+let listDevicesFn;
+
+async function listDevices() {
+  if (!listDevicesFn) {
+    const module = await import('@zxing/browser');
+    listDevicesFn = module.BrowserMultiFormatReader.listVideoInputDevices;
+  }
+  return listDevicesFn();
+}
+
 export function useQrScanner() {
-  const codeReader = new BrowserMultiFormatReader();
+  let codeReader;
   const videoInputDevices = ref([]);
   const selectedDeviceId = ref('');
   const scanning = ref(false);
@@ -12,7 +31,7 @@ export function useQrScanner() {
 
   async function loadDevices() {
     try {
-      const devices = await BrowserMultiFormatReader.listVideoInputDevices();
+      const devices = await listDevices();
       videoInputDevices.value = devices;
       if (devices.length > 0) {
         selectedDeviceId.value = devices[0].deviceId;
@@ -34,6 +53,9 @@ export function useQrScanner() {
     error.value = '';
 
     try {
+      if (!codeReader) {
+        codeReader = await getReader();
+      }
       await codeReader.decodeFromVideoDevice(
         selectedDeviceId.value,
         targetElementId,
@@ -56,7 +78,9 @@ export function useQrScanner() {
   }
 
   function stopScan() {
-    codeReader.reset();
+    if (codeReader) {
+      codeReader.reset();
+    }
     scanning.value = false;
   }
 
@@ -65,7 +89,9 @@ export function useQrScanner() {
   });
 
   onBeforeUnmount(() => {
-    codeReader.reset();
+    if (codeReader) {
+      codeReader.reset();
+    }
   });
 
   return {
