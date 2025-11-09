@@ -1,6 +1,10 @@
 <script setup>
-import { RouterLink } from 'vue-router';
+import { RouterLink, useRoute } from 'vue-router';
 import { roles } from '../../constants/roles';
+
+const route = useRoute();
+
+const isActive = (target) => route.path.startsWith(target);
 </script>
 
 <template>
@@ -8,9 +12,9 @@ import { roles } from '../../constants/roles';
     <RouterLink
       v-for="role in roles"
       :key="role.id"
-      :to="role.route"
       class="nav-link"
-      active-class="nav-link--active"
+      :class="{ 'nav-link--active': isActive(role.route) }"
+      :to="role.route"
     >
       <span class="emoji">{{ role.emoji }}</span>
       <span class="text">
@@ -37,9 +41,9 @@ import { roles } from '../../constants/roles';
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid transparent;
   border-radius: 0.8rem;
-  text-decoration: none;
   color: inherit;
   transition: border 0.2s, transform 0.2s;
+  text-decoration: none;
 }
 
 .nav-link:hover {
