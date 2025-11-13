@@ -3,11 +3,14 @@
 *.iml
 
 # Maven / Spring
-target/
+control-accesos-api/target/
 
 # Node / Vite
 control-accesos-pwa/node_modules/
 control-accesos-pwa/dist/
+
+# Docs
+documentos/
 
 # Logs
 *.log

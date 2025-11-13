@@ -20,11 +20,9 @@ function goLogin() {
 <template>
   <header class="app-header">
     <div>
-      <p class="app-subtitle">Control de accesos a la mina</p>
-      <h1>Portal PWA (Vue 3)</h1>
-      <p class="app-description">
-        Tres áreas autenticadas (trabajador, operador, administrador) y un flujo público para visitantes/contratistas.
-      </p>
+      <p class="app-subtitle">Control de accesos a las instalaciones</p>
+      <h1>ACELOR S.A</h1>
+
     </div>
     <div class="header-actions">
       <div class="app-tag">
