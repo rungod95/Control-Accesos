@@ -2,6 +2,7 @@ package com.mina.accesos.controller;
 
 import com.mina.accesos.dto.AuthResponse;
 import com.mina.accesos.dto.LoginRequest;
+import com.mina.accesos.dto.RefreshTokenRequest;
 import com.mina.accesos.service.JwtService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -28,10 +29,20 @@ public class AuthController {
             Authentication authentication = authManager.authenticate(
                     new UsernamePasswordAuthenticationToken(request.username(), request.password())
             );
-            String token = jwtService.generateToken(authentication.getName());
-            return ResponseEntity.ok(new AuthResponse(token));
+            AuthResponse response = jwtService.generateTokens(authentication.getName());
+            return ResponseEntity.ok(response);
         } catch (AuthenticationException ex) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
+    }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<AuthResponse> refresh(@Valid @RequestBody RefreshTokenRequest request) {
+        if (!jwtService.isTokenValid(request.refreshToken())) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        String username = jwtService.extractUsername(request.refreshToken());
+        AuthResponse response = jwtService.generateTokens(username);
+        return ResponseEntity.ok(response);
     }
 }

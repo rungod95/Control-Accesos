@@ -45,7 +45,7 @@ public class AccessLogController {
     }
 
     @GetMapping("/{id}")
-    public AccessLog findById(@PathVariable Long id) {
+    public AccessLog findById(@PathVariable("id") Long id) {
         return service.findById(id);
     }
 
@@ -55,7 +55,7 @@ public class AccessLogController {
     }
 
     @GetMapping("/ultimos")
-    public List<AccessLog> ultimos(@RequestParam(defaultValue = "10") int limit) {
+    public List<AccessLog> ultimos(@RequestParam(name = "limit", defaultValue = "10") int limit) {
         return service.findRecent(limit);
     }
 
@@ -71,13 +71,13 @@ public class AccessLogController {
     }
 
     @PutMapping("/{id}")
-    public AccessLog update(@PathVariable Long id, @Valid @RequestBody AccessLog accessLog) {
+    public AccessLog update(@PathVariable("id") Long id, @Valid @RequestBody AccessLog accessLog) {
         return service.update(id, accessLog);
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void delete(@PathVariable Long id) {
+    public void delete(@PathVariable("id") Long id) {
         service.delete(id);
     }
 }

@@ -1,6 +1,9 @@
 package com.mina.accesos.service;
 
-import io.jsonwebtoken.*;
+import com.mina.accesos.dto.AuthResponse;
+import io.jsonwebtoken.JwtException;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -15,11 +18,23 @@ public class JwtService {
     @Value("${jwt.expiration}")
     private long jwtExpirationMs;
 
-    public String generateToken(String username) {
+    @Value("${jwt.refresh-expiration}")
+    private long jwtRefreshExpirationMs;
+
+    public AuthResponse generateTokens(String username) {
+        long now = System.currentTimeMillis();
+        long accessExpiresAt = now + jwtExpirationMs;
+        long refreshExpiresAt = now + jwtRefreshExpirationMs;
+        String accessToken = buildToken(username, now, accessExpiresAt);
+        String refreshToken = buildToken(username, now, refreshExpiresAt);
+        return new AuthResponse(accessToken, accessExpiresAt, refreshToken, refreshExpiresAt);
+    }
+
+    private String buildToken(String username, long issuedAt, long expiresAt) {
         return Jwts.builder()
                 .setSubject(username)
-                .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis() + jwtExpirationMs))
+                .setIssuedAt(new Date(issuedAt))
+                .setExpiration(new Date(expiresAt))
                 .signWith(Keys.hmacShaKeyFor(secretKey.getBytes()), SignatureAlgorithm.HS256)
                 .compact();
     }

@@ -29,6 +29,12 @@ mvn spring-boot:run -Dspring-boot.run.profiles=prod
 - `PUT    /api/accesos/{id}` – actualizar
 - `DELETE /api/accesos/{id}` – borrar
 
+### Autenticación
+- `POST /auth/login` – devuelve un JWT de acceso (1h) y un refresh token (14 días).
+- `POST /auth/refresh` – recibe `{ "refreshToken": "..." }` y entrega un nuevo par de tokens sin pedir credenciales.
+
+> Ambos tokens se firman con `jwt.secret`. Ajusta `jwt.expiration` (ms) y `jwt.refresh-expiration` (ms) en `application-*.properties` para definir su vigencia.
+
 ### Ejemplo POST
 ```json
 {

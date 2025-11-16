@@ -40,6 +40,11 @@ const closeForm = ref({
 
 const syncing = ref(false);
 
+function formatLocalDateTime(date = new Date()) {
+  const offsetMs = date.getTimezoneOffset() * 60000;
+  return new Date(date.getTime() - offsetMs).toISOString().slice(0, 19);
+}
+
 async function loadData({ silent = false } = {}) {
   if (!session.isAuthenticated.value) {
     summary.value = null;
@@ -96,7 +101,7 @@ async function handleRegister() {
     tipoUsuario: 'trabajador',
     motivo: registerForm.value.motivo || 'Entrada QR',
     qrCode: registerForm.value.qrCode,
-    fechaHoraEntrada: new Date().toISOString(),
+    fechaHoraEntrada: formatLocalDateTime(),
   };
 
   const entry = { action: 'create', payload };
@@ -105,6 +110,7 @@ async function handleRegister() {
     try {
       await sendAccess(entry);
       registerForm.value.motivo = '';
+      await loadData({ silent: true });
     } catch (err) {
       ui.notifyError('No se pudo registrar el acceso, se guardará offline.');
       await addPending(entry);
@@ -119,13 +125,23 @@ async function handleClose() {
     ui.notifyWarning('Selecciona el acceso que quieres cerrar.');
     return;
   }
+  const accessId = Number(closeForm.value.accessId);
+  const selectedAccess = activeOpen.value.find((item) => item.id === accessId);
+  if (!selectedAccess) {
+    ui.notifyWarning('No se encontró el acceso seleccionado.');
+    return;
+  }
   const payload = {
-    id: closeForm.value.accessId,
-    body: {
-      fechaHoraSalida: new Date().toISOString(),
+    ...selectedAccess,
+    fechaHoraSalida: formatLocalDateTime(),
+  };
+  const entry = {
+    action: 'close',
+    payload: {
+      id: accessId,
+      body: payload,
     },
   };
-  const entry = { action: 'close', payload };
 
   if (navigator.onLine) {
     try {
