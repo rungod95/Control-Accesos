@@ -2,6 +2,8 @@ package com.mina.accesos.controller;
 
 import com.mina.accesos.domain.AccessLog;
 import com.mina.accesos.dto.AccessSummaryResponse;
+import com.mina.accesos.dto.VisitScanRequest;
+import com.mina.accesos.dto.VisitScanResponse;
 import com.mina.accesos.service.AccessLogService;
 import jakarta.validation.Valid;
 import java.time.LocalDateTime;
@@ -79,5 +81,10 @@ public class AccessLogController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable("id") Long id) {
         service.delete(id);
+    }
+
+    @PostMapping("/visitas/scan")
+    public VisitScanResponse scanVisit(@Valid @RequestBody VisitScanRequest request) {
+        return service.scanVisitor(request.qrCode());
     }
 }

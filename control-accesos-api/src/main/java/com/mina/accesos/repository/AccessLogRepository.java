@@ -3,6 +3,7 @@ package com.mina.accesos.repository;
 import com.mina.accesos.domain.AccessLog;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -33,4 +34,6 @@ public interface AccessLogRepository extends JpaRepository<AccessLog, Long> {
             @Param("hasta") LocalDateTime hasta,
             @Param("tipo") String tipoUsuario,
             @Param("qr") String qrCode);
+
+    Optional<AccessLog> findFirstByQrCodeAndFechaHoraSalidaIsNullOrderByFechaHoraEntradaDesc(String qrCode);
 }
