@@ -27,7 +27,10 @@ async function refreshSession() {
           refreshToken: data.refreshToken,
           expiresAt: data.expiresAt,
           refreshExpiresAt: data.refreshExpiresAt,
-          username: session.username.value,
+          username: data.username ?? session.username.value,
+          role: data.role ?? session.role.value,
+          fullName: data.fullName ?? session.fullName.value,
+          qrCode: data.qrCode ?? session.qrCode.value,
         });
         return data.token;
       })

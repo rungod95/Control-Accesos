@@ -8,7 +8,10 @@ export async function login(credentials) {
     refreshToken: data.refreshToken,
     expiresAt: data.expiresAt,
     refreshExpiresAt: data.refreshExpiresAt,
-    username: credentials.username,
+    username: data.username ?? credentials.username,
+    role: data.role,
+    fullName: data.fullName,
+    qrCode: data.qrCode,
   });
   return data;
 }

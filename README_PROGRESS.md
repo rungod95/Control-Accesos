@@ -1,26 +1,34 @@
 # Work In Progress Notes
 
 ## Current Branch
-- `feature/pwa-shell`
+- `feature/pwa-shell` (trabajo activo en la PWA: sesión persistente + QR personal por usuario)
+- Ramas integradas recientemente:
+  - `feature/pwa-shell` (estructura monorepo + PWA shell) → mergeada en `develop`
+  - `feature/integration-tests-v2` (suite de integración auth/usuarios/analytics) → mergeada en `develop`
+  - `chore/pom-plugin-versions` (fijar versiones de plugins Maven) → mergeada en `develop`
 - Latest successful commands:
-  - Backend: `mvn spring-boot:run -Dspring-boot.run.profiles=dev`
-  - Frontend: `npm run build`
+  - Backend: `cd control-accesos-api && mvn spring-boot:run -Dspring-boot.run.profiles=dev`
+  - Backend tests: `cd control-accesos-api && mvn test`
+  - Frontend: `cd control-accesos-pwa && npm run build`
 
-## Completed Today
-- Reorganised repo en dos carpetas (`control-accesos-api`, `control-accesos-pwa`).
-- Bootstrapped PWA (Vue + Vite) con rutas por rol, lector QR, cola offline e integración Axios/JWT.
-- Añadidas vistas para notas, cierres manuales desde operador/admin y botones de sincronización offline.
-- Ajustes de seguridad: H2 console liberada y CORS en `/auth/login`.
+## Completed Recently
+- Sesión persistente con access/refresh tokens; wiring completo en PWA para renovar tokens y mantener usuario logueado.
+- Campo `qrCode` añadido a `user_account`, seeds y DTOs; `/auth/login`, `/auth/refresh` y `/api/users/me` devuelven username/rol/nombre/QR.
+- Worker view actualizada: muestra QR gráfico descargable, precarga su código y puede registrar entrada/salida sin reescribirlo.
+- Generador de visitantes en `/admin`: crea usuario VISITANTE + QR y muestra PNG descargable; hook de cámara recuerda dispositivo y limpia streams al navegar.
+- Endpoint público `POST /api/accesos/visitas/scan` que alterna entrada/salida según QR; GuestView lo usa para validar la visita y mostrar instrucciones de seguridad.
 
 ## Pending Actions
-- Detectar rol tras login y redirigir automáticamente al dashboard correspondiente.
-- Mostrar badge global con operaciones offline pendientes y añadir botón "Sincronizar ahora" en header.
-- Añadir controles para export/report endpoints y preparar futura migración a PostgreSQL.
+- Ajustar navegación por rol una vez autenticado (revisar guardas para operadores).
+- Badge offline global (sincronización manual en header) y estado persistente.
+- Añadir expiración/revocación de QRs y flujo de compartición segura.
+- Export/report endpoints y preparación migración a PostgreSQL (Docker Compose).
+- Revisar por qué `mvn test` informa `Tests run: 0` y recuperar la suite de integración.
 
 ## Quick Commands
 - Backend (dev profile): `cd control-accesos-api && mvn spring-boot:run -Dspring-boot.run.profiles=dev`
 - Frontend: `cd control-accesos-pwa && npm run dev` (usar `nvm use 22`)
-- Tests API: `cd control-accesos-api && mvn -q test`
+- Tests API: `cd control-accesos-api && mvn test`
 - Build PWA: `cd control-accesos-pwa && npm run build`
 
 ## Credentials / Seeds (dev)

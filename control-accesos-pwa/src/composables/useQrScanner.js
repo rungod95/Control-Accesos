@@ -21,6 +21,34 @@ async function listDevices() {
   return listDevicesFn();
 }
 
+const STORAGE_CAMERA = 'ca_last_camera';
+
+function pickPreferredDevice(devices) {
+  const stored = localStorage.getItem(STORAGE_CAMERA);
+  if (stored) {
+    const matched = devices.find((device) => device.deviceId === stored);
+    if (matched) {
+      return matched.deviceId;
+    }
+  }
+  const backCamera = devices.find((device) => {
+    const label = device.label?.toLowerCase() ?? '';
+    return label.includes('back') || label.includes('trasera') || label.includes('rear');
+  });
+  if (backCamera) {
+    return backCamera.deviceId;
+  }
+  return devices[0]?.deviceId ?? '';
+}
+
+async function ensureCameraPermission() {
+  if (!navigator.mediaDevices?.getUserMedia) {
+    throw new Error('Este navegador no permite acceso a la cámara.');
+  }
+  const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+  stream.getTracks().forEach((track) => track.stop());
+}
+
 export function useQrScanner() {
   let codeReader;
   const videoInputDevices = ref([]);
@@ -31,18 +59,19 @@ export function useQrScanner() {
 
   async function loadDevices() {
     try {
+      await ensureCameraPermission();
       const devices = await listDevices();
       videoInputDevices.value = devices;
       if (devices.length > 0) {
-        selectedDeviceId.value = devices[0].deviceId;
+        selectedDeviceId.value = pickPreferredDevice(devices);
       }
     } catch (err) {
-      error.value = 'No se detectó ninguna cámara disponible.';
+      error.value = err?.message ?? 'No se detectó ninguna cámara disponible.';
       ui.notifyError(error.value);
     }
   }
 
-  async function startScan(targetElementId = 'qr-video') {
+async function startScan(targetElementId = 'qr-video') {
     if (!selectedDeviceId.value) {
       await loadDevices();
     }
@@ -56,17 +85,18 @@ export function useQrScanner() {
       if (!codeReader) {
         codeReader = await getReader();
       }
+      const deviceId = selectedDeviceId.value;
+      if (deviceId) {
+        localStorage.setItem(STORAGE_CAMERA, deviceId);
+      }
       await codeReader.decodeFromVideoDevice(
         selectedDeviceId.value,
         targetElementId,
-        (result, err) => {
+        (result) => {
           if (result) {
             lastResult.value = result.getText();
-            ui.notifySuccess('QR leído correctamente');
+            error.value = '';
             stopScan();
-          }
-          if (err && err.name !== 'NotFoundException') {
-            error.value = 'No se pudo interpretar el QR';
           }
         },
       );
@@ -77,11 +107,21 @@ export function useQrScanner() {
     }
   }
 
+  function disposeReader() {
+    if (codeReader?.reset) {
+      codeReader.reset();
+    } else if (codeReader?.stopStreams) {
+      codeReader.stopStreams();
+    }
+    codeReader = undefined;
+  }
+
   function stopScan() {
     if (codeReader) {
-      codeReader.reset();
+      disposeReader();
     }
     scanning.value = false;
+    error.value = '';
   }
 
   onMounted(() => {
@@ -89,9 +129,7 @@ export function useQrScanner() {
   });
 
   onBeforeUnmount(() => {
-    if (codeReader) {
-      codeReader.reset();
-    }
+    disposeReader();
   });
 
   return {

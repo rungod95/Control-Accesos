@@ -1,11 +1,16 @@
 <script setup>
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { session } from '../../stores/session';
 import { logout } from '../../services/authService';
+import { offlineQueue, flushQueue } from '../../stores/offlineQueue';
+import { processAccessEntry } from '../../services/offlineSyncService';
 
 const router = useRouter();
-const userLabel = computed(() => session.username.value || 'Invitado');
+const userLabel = computed(() => session.fullName.value || session.username.value || 'Invitado');
+const pendingCount = computed(() => offlineQueue.state.pending.length);
+const hasPending = computed(() => pendingCount.value > 0);
+const syncing = ref(false);
 
 function handleLogout() {
   logout();
@@ -14,6 +19,18 @@ function handleLogout() {
 
 function goLogin() {
   router.push({ name: 'login' });
+}
+
+async function handleSync() {
+  if (!hasPending.value || syncing.value) {
+    return;
+  }
+  syncing.value = true;
+  try {
+    await flushQueue(processAccessEntry);
+  } finally {
+    syncing.value = false;
+  }
 }
 </script>
 
@@ -28,6 +45,15 @@ function goLogin() {
       <div class="app-tag">
         <span>PWA Ready</span>
       </div>
+      <button
+        v-if="session.isAuthenticated.value"
+        type="button"
+        class="sync-btn"
+        :disabled="!hasPending || syncing"
+        @click="handleSync"
+      >
+        {{ hasPending ? `Sincronizar (${pendingCount})` : 'Sin pendientes' }}
+      </button>
       <div class="session-panel" v-if="session.isAuthenticated.value">
         <span class="user-chip">🔐 {{ userLabel }}</span>
         <button type="button" @click="handleLogout">Salir</button>
@@ -95,6 +121,20 @@ h1 {
   padding: 0.3rem 0.8rem;
   border-radius: 999px;
   background: rgba(148, 163, 184, 0.15);
+}
+
+.sync-btn {
+  background: transparent;
+  border: 1px solid rgba(59, 130, 246, 0.5);
+  color: #bfdbfe;
+  padding: 0.35rem 0.75rem;
+  border-radius: 0.6rem;
+  cursor: pointer;
+}
+
+.sync-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 button {
