@@ -1,5 +1,6 @@
 package com.mina.accesos.controller;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mina.accesos.dto.AuthResponse;
 import com.mina.accesos.dto.LoginRequest;
 import com.mina.accesos.dto.UserAccountCreateRequest;
@@ -26,8 +27,10 @@ class UserAccountControllerTest {
     @Autowired
     private TestRestTemplate restTemplate;
 
+    private final ObjectMapper mapper = new ObjectMapper();
+
     @Test
-    void shouldCreateUpdateUserAndFetchMe() {
+    void shouldCreateUpdateUserAndFetchMe() throws Exception {
         String token = obtainAdminToken();
         HttpHeaders headers = authHeaders(token);
 
@@ -54,20 +57,22 @@ class UserAccountControllerTest {
         UserAccountUpdateRequest updatePayload = new UserAccountUpdateRequest(
                 "TRABAJADOR",
                 "Usuario Actualizado",
-                "",
+                null,
                 "QR-" + username.toUpperCase() + "-UPDATED"
         );
 
-        ResponseEntity<UserAccountResponse> updateRes = restTemplate.exchange(
+        ResponseEntity<String> updateRes = restTemplate.exchange(
                 "/api/users/" + createRes.getBody().id(),
                 HttpMethod.PUT,
                 new HttpEntity<>(updatePayload, headers),
-                UserAccountResponse.class);
+                String.class);
 
-        assertThat(updateRes.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(updateRes.getBody()).isNotNull();
-        assertThat(updateRes.getBody().fullName()).isEqualTo("Usuario Actualizado");
-        assertThat(updateRes.getBody().qrCode()).endsWith("-UPDATED");
+        assertThat(updateRes.getStatusCode())
+                .as("Update failed: %s", updateRes.getBody())
+                .isEqualTo(HttpStatus.OK);
+        UserAccountResponse updated = mapper.readValue(updateRes.getBody(), UserAccountResponse.class);
+        assertThat(updated.fullName()).isEqualTo("Usuario Actualizado");
+        assertThat(updated.qrCode()).endsWith("-UPDATED");
 
         ResponseEntity<UserAccountResponse> meRes = restTemplate.exchange(
                 "/api/users/me",
