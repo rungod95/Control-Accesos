@@ -3,11 +3,7 @@ import { RouterLink, useRoute } from 'vue-router';
 
 const route = useRoute();
 
-const links = [
-  { path: '/', label: 'Inicio', subtitle: 'Resumen general', emoji: '🏠' },
-  { path: '/qr', label: 'Visitante', subtitle: 'QR temporal', emoji: '👋' },
-  { path: '/login', label: 'Acceso', subtitle: 'Autenticación', emoji: '🔐' },
-];
+const links = [];
 
 const isActive = (target) => route.path === target;
 </script>
