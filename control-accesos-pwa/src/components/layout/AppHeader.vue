@@ -12,6 +12,10 @@ const pendingCount = computed(() => offlineQueue.state.pending.length);
 const hasPending = computed(() => pendingCount.value > 0);
 const syncing = ref(false);
 
+function goHome() {
+  router.push({ path: '/' });
+}
+
 function handleLogout() {
   logout();
   router.push({ name: 'login' });
@@ -36,11 +40,10 @@ async function handleSync() {
 
 <template>
   <header class="app-header">
-    <div>
+    <button class="brand" type="button" @click="goHome">
       <p class="app-subtitle">Control de accesos a las instalaciones</p>
       <h1>ACELOR S.A</h1>
-
-    </div>
+    </button>
     <div class="header-actions">
       <div class="app-tag">
         <span>PWA Ready</span>
@@ -67,13 +70,22 @@ async function handleSync() {
 </template>
 
 <style scoped>
- .app-header {
+.app-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 1.5rem;
   padding-block: 1.5rem;
   border-bottom: 1px solid var(--border-color);
+}
+
+.brand {
+  background: transparent;
+  border: none;
+  padding: 0;
+  text-align: left;
+  color: inherit;
+  cursor: pointer;
 }
 
 .app-subtitle {
