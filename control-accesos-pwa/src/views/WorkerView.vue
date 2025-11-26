@@ -141,11 +141,17 @@ watch(
       <h3>Mis últimos accesos</h3>
       <ul>
         <li v-for="item in recent" :key="item.id">
-          <div>
-            <strong>{{ item.nombrePersona }}</strong>
-            <small>{{ item.tipoUsuario }}</small>
+          <div class="access-details">
+            <div class="header">
+              <strong>{{ item.nombrePersona }}</strong>
+              <span class="status-chip" :class="{ open: !item.fechaHoraSalida }">
+                {{ item.fechaHoraSalida ? 'Salida registrada' : 'Entrada abierta' }}
+              </span>
+            </div>
+            <small class="muted">Tipo: {{ item.tipoUsuario }}</small>
+            <small>Entrada: {{ item.fechaHoraEntrada }}</small>
+            <small>Salida: {{ item.fechaHoraSalida || '—' }}</small>
           </div>
-          <span>{{ item.fechaHoraEntrada }}</span>
         </li>
       </ul>
     </div>
@@ -223,8 +229,7 @@ watch(
 
 .recent li {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
   border-bottom: 1px solid rgba(148, 163, 184, 0.2);
   padding-bottom: 0.6rem;
 }
@@ -277,4 +282,33 @@ watch(
   color: #bfdbfe;
 }
 
+.access-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.access-details .header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.status-chip {
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid rgba(34, 197, 94, 0.5);
+  color: #bbf7d0;
+  font-size: 0.8rem;
+}
+
+.status-chip.open {
+  border-color: rgba(234, 179, 8, 0.7);
+  color: #fcd34d;
+}
+
+.muted {
+  color: var(--muted-color);
+}
 </style>
