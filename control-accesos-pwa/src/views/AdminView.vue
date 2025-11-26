@@ -25,13 +25,14 @@ const loading = ref(false);
 const error = ref('');
 const editingUserId = ref(null);
 const qrEditValue = ref('');
-const visitorForm = ref({
+const userForm = ref({
   fullName: '',
   username: '',
   qrCode: '',
+  role: 'VISITANTE',
 });
 const creatingVisitor = ref(false);
-const lastVisitor = ref(null);
+const lastCreated = ref(null);
 
 const session = useSession();
 const ui = useUi();
@@ -120,41 +121,43 @@ function randomSuffix() {
   return Math.random().toString(36).slice(2, 6);
 }
 
-async function handleCreateVisitor() {
-  if (!visitorForm.value.fullName) {
-    ui.notifyWarning('Introduce el nombre del visitante.');
+async function handleCreateUser() {
+  if (!userForm.value.fullName) {
+    ui.notifyWarning('Introduce el nombre del usuario.');
     return;
   }
   creatingVisitor.value = true;
   try {
-    const usernameBase = visitorForm.value.username || slugify(visitorForm.value.fullName);
+    const usernameBase = userForm.value.username || slugify(userForm.value.fullName);
     const username = `${usernameBase}-${randomSuffix()}`;
-    const password = `vis-${randomSuffix()}${Math.floor(Date.now() % 100)}`;
-    const qrCode = (visitorForm.value.qrCode || `QR-${usernameBase}`)
+    const password = `usr-${randomSuffix()}${Math.floor(Date.now() % 100)}`;
+    const qrCode = (userForm.value.qrCode || `QR-${usernameBase}`)
       .replace(/\s+/g, '-')
       .toUpperCase();
 
     const payload = {
       username,
       password,
-      role: 'VISITANTE',
-      fullName: visitorForm.value.fullName,
+      role: userForm.value.role || 'VISITANTE',
+      fullName: userForm.value.fullName,
       qrCode,
     };
     const created = await createUser(payload);
     users.value.push(created);
-    lastVisitor.value = {
+    lastCreated.value = {
       username,
       password,
       qrCode,
       fullName: created.fullName,
+      role: payload.role,
     };
-    visitorForm.value.fullName = '';
-    visitorForm.value.username = '';
-    visitorForm.value.qrCode = '';
-    ui.notifySuccess(`Visita '${created.fullName}' creada con QR ${qrCode}`);
+    userForm.value.fullName = '';
+    userForm.value.username = '';
+    userForm.value.qrCode = '';
+    userForm.value.role = 'VISITANTE';
+    ui.notifySuccess(`Usuario '${created.fullName}' creado con rol ${payload.role} y QR ${qrCode}`);
   } catch (err) {
-    const message = err.response?.data?.error ?? 'No se pudo crear la visita';
+    const message = err.response?.data?.error ?? 'No se pudo crear el usuario';
     ui.notifyError(message);
   } finally {
     creatingVisitor.value = false;
@@ -173,34 +176,43 @@ async function handleCreateVisitor() {
   />
 
   <section class="admin-table visitor-card">
-    <h3>Generar QR para visitante</h3>
-    <form class="visitor-form" @submit.prevent="handleCreateVisitor">
+    <h3>Crear usuario / QR</h3>
+    <form class="visitor-form" @submit.prevent="handleCreateUser">
       <label>
         Nombre completo
-        <input v-model="visitorForm.fullName" placeholder="Visita empresa XYZ" required />
+        <input v-model="userForm.fullName" placeholder="Nombre Apellido" required />
       </label>
       <label>
         Identificador (opcional)
-        <input v-model="visitorForm.username" placeholder="visita-empresa" />
+        <input v-model="userForm.username" placeholder="usuario-corporativo" />
+      </label>
+      <label>
+        Rol
+        <select v-model="userForm.role" required>
+          <option value="VISITANTE">Visitante</option>
+          <option value="TRABAJADOR">Trabajador</option>
+          <option value="ADMIN">Admin</option>
+        </select>
       </label>
       <label>
         QR personalizado (opcional)
-        <input v-model="visitorForm.qrCode" placeholder="QR-VIS-001" />
+        <input v-model="userForm.qrCode" placeholder="QR-USER-001" />
       </label>
       <button type="submit" class="create-btn" :disabled="creatingVisitor">
         {{ creatingVisitor ? 'Generando...' : 'Crear visitante' }}
       </button>
     </form>
-    <div v-if="lastVisitor" class="visitor-summary">
-      <p><strong>Último visitante creado</strong></p>
-      <p>Nombre: {{ lastVisitor.fullName }}</p>
-      <p>Usuario: <code>{{ lastVisitor.username }}</code></p>
-      <p>Contraseña temporal: <code>{{ lastVisitor.password }}</code></p>
-      <p>QR asignado: <code>{{ lastVisitor.qrCode }}</code></p>
+    <div v-if="lastCreated" class="visitor-summary">
+      <p><strong>Último usuario creado</strong></p>
+      <p>Nombre: {{ lastCreated.fullName }}</p>
+      <p>Rol: {{ lastCreated.role }}</p>
+      <p>Usuario: <code>{{ lastCreated.username }}</code></p>
+      <p>Contraseña temporal: <code>{{ lastCreated.password }}</code></p>
+      <p>QR asignado: <code>{{ lastCreated.qrCode }}</code></p>
       <UserQrCard
-        :value="lastVisitor.qrCode"
-        :label="`QR · ${lastVisitor.fullName}`"
-        :download-name="`qr-${lastVisitor.username}.png`"
+        :value="lastCreated.qrCode"
+        :label="`QR · ${lastCreated.fullName}`"
+        :download-name="`qr-${lastCreated.username}.png`"
       />
     </div>
   </section>

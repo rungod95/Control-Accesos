@@ -1,5 +1,20 @@
 <script setup>
-import { RouterLink } from 'vue-router';
+import { onMounted } from 'vue';
+import { RouterLink, useRouter } from 'vue-router';
+import { session } from '../stores/session';
+
+const router = useRouter();
+const ROLE_HOME = {
+  ADMIN: '/admin',
+  TRABAJADOR: '/trabajador',
+};
+
+onMounted(() => {
+  if (session.isAuthenticated.value) {
+    const target = ROLE_HOME[session.role.value] ?? '/';
+    router.replace(target).catch(() => {});
+  }
+});
 </script>
 
 <template>
