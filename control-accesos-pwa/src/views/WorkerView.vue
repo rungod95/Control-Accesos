@@ -111,7 +111,7 @@ watch(
         <button
           type="button"
           class="use-qr-btn"
-          @click="useOwnQr"
+          @click="handleCopyQr"
           :disabled="!hasAssignedQr"
         >
           Copiar/usar mi QR
