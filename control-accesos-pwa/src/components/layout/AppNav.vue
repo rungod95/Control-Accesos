@@ -16,6 +16,9 @@ const publicLinks = [
 ];
 
 const links = computed(() => {
+  if (route.path === '/') {
+    return [];
+  }
   if (!session.isAuthenticated.value) {
     return publicLinks;
   }
@@ -27,7 +30,7 @@ const isActive = (target) => route.path === target;
 </script>
 
 <template>
-  <nav class="app-nav">
+  <nav v-if="links.length" class="app-nav">
     <RouterLink
       v-for="link in links"
       :key="link.path"
@@ -42,6 +45,7 @@ const isActive = (target) => route.path === target;
       </span>
     </RouterLink>
   </nav>
+  <div v-else class="app-nav-spacer" aria-hidden="true"></div>
 </template>
 
 <style scoped>
@@ -87,5 +91,9 @@ const isActive = (target) => route.path === target;
 
 small {
   color: var(--muted-color);
+}
+
+.app-nav-spacer {
+  height: 1rem;
 }
 </style>
