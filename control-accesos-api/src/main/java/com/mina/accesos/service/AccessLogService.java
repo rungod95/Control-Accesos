@@ -1,8 +1,10 @@
 package com.mina.accesos.service;
 
 import com.mina.accesos.domain.AccessLog;
+import com.mina.accesos.domain.UserAccount;
 import com.mina.accesos.dto.AccessByTypeResponse;
 import com.mina.accesos.dto.AccessSummaryResponse;
+import com.mina.accesos.dto.VisitScanResponse;
 import com.mina.accesos.exception.NotFoundException;
 import com.mina.accesos.repository.AccessLogRepository;
 import java.time.LocalDate;
@@ -19,9 +21,11 @@ import org.springframework.util.StringUtils;
 public class AccessLogService {
 
     private final AccessLogRepository repository;
+    private final UserAccountService userAccountService;
 
-    public AccessLogService(AccessLogRepository repository) {
+    public AccessLogService(AccessLogRepository repository, UserAccountService userAccountService) {
         this.repository = repository;
+        this.userAccountService = userAccountService;
     }
 
     public List<AccessLog> findAll() {
@@ -94,5 +98,32 @@ public class AccessLogService {
                 .collect(Collectors.toList());
 
         return new AccessSummaryResponse(total, activos, hoy, ultimaSemana, porTipo);
+    }
+
+    public VisitScanResponse scanVisitor(String qrCode) {
+        if (!StringUtils.hasText(qrCode)) {
+            throw new IllegalArgumentException("QR no válido.");
+        }
+        String normalizedQr = qrCode.trim().toUpperCase(Locale.ROOT);
+        UserAccount visitor = userAccountService.findByQrCode(normalizedQr);
+
+        AccessLog openLog = repository.findFirstByQrCodeAndFechaHoraSalidaIsNullOrderByFechaHoraEntradaDesc(normalizedQr)
+                .orElse(null);
+
+        if (openLog != null) {
+            openLog.setFechaHoraSalida(LocalDateTime.now());
+            repository.save(openLog);
+            return VisitScanResponse.exit(visitor.getFullName(), normalizedQr, openLog.getFechaHoraEntrada(),
+                    openLog.getFechaHoraSalida());
+        }
+
+        AccessLog log = new AccessLog();
+        log.setNombrePersona(StringUtils.hasText(visitor.getFullName()) ? visitor.getFullName() : visitor.getUsername());
+        log.setTipoUsuario(visitor.getRole().name().toLowerCase(Locale.ROOT));
+        log.setMotivo("Acceso visitante QR");
+        log.setQrCode(normalizedQr);
+        log.setFechaHoraEntrada(LocalDateTime.now());
+        repository.save(log);
+        return VisitScanResponse.entry(visitor.getFullName(), normalizedQr, log.getFechaHoraEntrada());
     }
 }

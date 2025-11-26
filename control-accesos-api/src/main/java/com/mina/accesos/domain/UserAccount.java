@@ -34,4 +34,7 @@ public class UserAccount {
 
     @Column(nullable = false)
     private boolean enabled = true;
+
+    @Column(name = "qr_code", length = 120)
+    private String qrCode;
 }

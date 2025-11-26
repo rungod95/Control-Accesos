@@ -9,6 +9,7 @@ public record UserAccountCreateRequest(
         String password,
         @NotBlank(message = "role es obligatorio")
         String role,
-        String fullName
+        String fullName,
+        String qrCode
 ) {
 }

@@ -7,6 +7,7 @@ import com.mina.accesos.dto.UserAccountResponse;
 import com.mina.accesos.dto.UserAccountUpdateRequest;
 import com.mina.accesos.service.UserAccountService;
 import jakarta.validation.Valid;
+import java.security.Principal;
 import java.util.List;
 import java.util.Locale;
 import java.util.stream.Collectors;
@@ -39,28 +40,43 @@ public class UserAccountController {
     }
 
     @GetMapping("/{id}")
-    public UserAccountResponse findById(@PathVariable Long id) {
+    public UserAccountResponse findById(@PathVariable("id") Long id) {
         return toResponse(userService.findById(id));
+    }
+
+    @GetMapping("/me")
+    public UserAccountResponse me(Principal principal) {
+        return toResponse(userService.findByUsername(principal.getName()));
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public UserAccountResponse create(@Valid @RequestBody UserAccountCreateRequest request) {
         Role role = parseRole(request.role());
-        UserAccount created = userService.createUser(request.username(), request.password(), role, request.fullName());
+        UserAccount created = userService.createUser(
+                request.username(),
+                request.password(),
+                role,
+                request.fullName(),
+                request.qrCode());
         return toResponse(created);
     }
 
     @PutMapping("/{id}")
-    public UserAccountResponse update(@PathVariable Long id, @Valid @RequestBody UserAccountUpdateRequest request) {
+    public UserAccountResponse update(@PathVariable("id") Long id, @Valid @RequestBody UserAccountUpdateRequest request) {
         Role role = parseRole(request.role());
-        UserAccount updated = userService.updateUser(id, request.fullName(), role, request.password());
+        UserAccount updated = userService.updateUser(
+                id,
+                request.fullName(),
+                role,
+                request.password(),
+                request.qrCode());
         return toResponse(updated);
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void delete(@PathVariable Long id) {
+    public void delete(@PathVariable("id") Long id) {
         userService.deleteUser(id);
     }
 
@@ -74,6 +90,6 @@ public class UserAccountController {
 
     private UserAccountResponse toResponse(UserAccount user) {
         return new UserAccountResponse(user.getId(), user.getUsername(), user.getFullName(),
-                user.getRole().name(), user.isEnabled());
+                user.getRole().name(), user.isEnabled(), user.getQrCode());
     }
 }

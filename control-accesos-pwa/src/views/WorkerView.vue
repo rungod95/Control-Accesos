@@ -1,11 +1,13 @@
 <script setup>
-import { ref, watch, onMounted, onBeforeUnmount } from 'vue';
+import { ref, watch, onMounted, onBeforeUnmount, computed } from 'vue';
 import RoleSection from '../components/RoleSection.vue';
-import { fetchSummary, fetchRecent, fetchActive, registerAccess, closeAccess } from '../services/accessLogService';
+import UserQrCard from '../components/UserQrCard.vue';
+import { fetchSummary, fetchRecent, fetchActive } from '../services/accessLogService';
 import { useSession } from '../stores/session';
 import { useUi } from '../stores/ui';
 import { useQrScanner } from '../composables/useQrScanner';
 import { offlineQueue, addPending, flushQueue, loadQueue } from '../stores/offlineQueue';
+import { processAccessEntry } from '../services/offlineSyncService';
 
 const actions = [
   'Login JWT y refresco del token',
@@ -27,11 +29,19 @@ const error = ref('');
 
 const session = useSession();
 const ui = useUi();
-const scanner = useQrScanner();
+const {
+  videoInputDevices,
+  selectedDeviceId,
+  scanning,
+  lastResult,
+  error: scannerError,
+  startScan,
+  stopScan,
+} = useQrScanner();
 
 const registerForm = ref({
   motivo: '',
-  qrCode: '',
+  qrCode: session.qrCode.value || '',
 });
 
 const closeForm = ref({
@@ -39,6 +49,14 @@ const closeForm = ref({
 });
 
 const syncing = ref(false);
+const assignedQr = computed(() => session.qrCode.value || '');
+const hasAssignedQr = computed(() => Boolean(session.qrCode.value));
+const qrDownloadName = computed(() => `${session.username.value || 'mi-qr'}.png`);
+
+function formatLocalDateTime(date = new Date()) {
+  const offsetMs = date.getTimezoneOffset() * 60000;
+  return new Date(date.getTime() - offsetMs).toISOString().slice(0, 19);
+}
 
 async function loadData({ silent = false } = {}) {
   if (!session.isAuthenticated.value) {
@@ -76,16 +94,6 @@ watch(
   { immediate: true },
 );
 
-async function sendAccess(entry) {
-  if (entry.action === 'create') {
-    await registerAccess(entry.payload);
-    ui.notifySuccess('Acceso registrado correctamente');
-  } else if (entry.action === 'close') {
-    await closeAccess(entry.payload.id, entry.payload.body);
-    ui.notifySuccess('Salida registrada correctamente');
-  }
-}
-
 async function handleRegister() {
   if (!registerForm.value.qrCode) {
     ui.notifyWarning('Escanea o introduce un QR primero.');
@@ -96,15 +104,16 @@ async function handleRegister() {
     tipoUsuario: 'trabajador',
     motivo: registerForm.value.motivo || 'Entrada QR',
     qrCode: registerForm.value.qrCode,
-    fechaHoraEntrada: new Date().toISOString(),
+    fechaHoraEntrada: formatLocalDateTime(),
   };
 
   const entry = { action: 'create', payload };
 
   if (navigator.onLine) {
     try {
-      await sendAccess(entry);
+      await processAccessEntry(entry);
       registerForm.value.motivo = '';
+      await loadData({ silent: true });
     } catch (err) {
       ui.notifyError('No se pudo registrar el acceso, se guardará offline.');
       await addPending(entry);
@@ -119,17 +128,27 @@ async function handleClose() {
     ui.notifyWarning('Selecciona el acceso que quieres cerrar.');
     return;
   }
+  const accessId = Number(closeForm.value.accessId);
+  const selectedAccess = activeOpen.value.find((item) => item.id === accessId);
+  if (!selectedAccess) {
+    ui.notifyWarning('No se encontró el acceso seleccionado.');
+    return;
+  }
   const payload = {
-    id: closeForm.value.accessId,
-    body: {
-      fechaHoraSalida: new Date().toISOString(),
+    ...selectedAccess,
+    fechaHoraSalida: formatLocalDateTime(),
+  };
+  const entry = {
+    action: 'close',
+    payload: {
+      id: accessId,
+      body: payload,
     },
   };
-  const entry = { action: 'close', payload };
 
   if (navigator.onLine) {
     try {
-      await sendAccess(entry);
+      await processAccessEntry(entry);
       closeForm.value.accessId = '';
       await loadData({ silent: true });
     } catch (err) {
@@ -142,8 +161,16 @@ async function handleClose() {
 }
 
 function handleScannerResult() {
-  if (scanner.lastResult.value) {
-    registerForm.value.qrCode = scanner.lastResult.value;
+  if (lastResult.value) {
+    registerForm.value.qrCode = lastResult.value;
+  }
+}
+
+function useOwnQr() {
+  if (session.qrCode.value) {
+    registerForm.value.qrCode = session.qrCode.value;
+  } else {
+    ui.notifyWarning('Aún no tienes un QR asignado.');
   }
 }
 
@@ -151,11 +178,12 @@ let flushInterval;
 
 onMounted(async () => {
   await loadQueue();
+  startScan('worker-qr-video').catch(() => {});
   flushInterval = setInterval(async () => {
     if (navigator.onLine && offlineQueue.state.pending.length > 0 && !syncing.value) {
       try {
         syncing.value = true;
-        await flushQueue(sendAccess);
+        await flushQueue(processAccessEntry);
       } finally {
         syncing.value = false;
       }
@@ -169,7 +197,15 @@ onBeforeUnmount(() => {
   }
 });
 
-watch(() => scanner.lastResult.value, handleScannerResult);
+watch(() => lastResult.value, handleScannerResult);
+watch(
+  () => session.qrCode.value,
+  (value) => {
+    if (value && !registerForm.value.qrCode) {
+      registerForm.value.qrCode = value;
+    }
+  },
+);
 </script>
 
 <template>
@@ -188,17 +224,25 @@ watch(() => scanner.lastResult.value, handleScannerResult);
       <div class="scanner-controls">
         <label>
           Cámara
-          <select v-model="scanner.selectedDeviceId">
-            <option v-for="device in scanner.videoInputDevices" :key="device.deviceId" :value="device.deviceId">
+          <select v-model="selectedDeviceId">
+            <option v-for="device in videoInputDevices" :key="device.deviceId" :value="device.deviceId">
               {{ device.label || 'Cámara' }}
             </option>
           </select>
         </label>
-        <button type="button" @click="scanner.scanning ? scanner.stopScan() : scanner.startScan('worker-qr-video')">
-          {{ scanner.scanning ? 'Detener' : 'Escanear' }}
+        <button type="button" @click="scanning ? stopScan() : startScan('worker-qr-video')">
+          {{ scanning ? 'Detener' : 'Escanear' }}
         </button>
       </div>
-      <p v-if="scanner.error" class="error">{{ scanner.error }}</p>
+      <p v-if="scannerError" class="error">{{ scannerError }}</p>
+    </div>
+
+    <div class="qr-wrapper">
+      <UserQrCard
+        :value="assignedQr"
+        label="Mi QR personal"
+        :download-name="qrDownloadName"
+      />
     </div>
 
     <form class="register-form" @submit.prevent="handleRegister">
@@ -206,6 +250,20 @@ watch(() => scanner.lastResult.value, handleScannerResult);
         QR detectado / manual
         <input v-model="registerForm.qrCode" placeholder="QR-TRAB-001" />
       </label>
+      <div class="own-qr">
+        <div>
+          <span>Mi QR asignado</span>
+          <strong>{{ hasAssignedQr ? assignedQr : 'Sin asignar' }}</strong>
+        </div>
+        <button
+          type="button"
+          class="use-qr-btn"
+          @click="useOwnQr"
+          :disabled="!hasAssignedQr"
+        >
+          Usar mi QR
+        </button>
+      </div>
       <label>
         Motivo
         <input v-model="registerForm.motivo" placeholder="Inicio de turno" />
@@ -237,7 +295,7 @@ watch(() => scanner.lastResult.value, handleScannerResult);
   <section class="worker-data">
     <div class="toolbar" v-if="session.isAuthenticated.value">
       <button type="button" @click="loadData()">Actualizar datos</button>
-      <button type="button" @click="flushQueue(sendAccess)" :disabled="syncing">
+      <button type="button" @click="flushQueue(processAccessEntry)" :disabled="syncing">
         Sincronizar pendientes
         <span v-if="offlineQueue.state.pending.length" class="badge">{{ offlineQueue.state.pending.length }}</span>
       </button>
@@ -364,7 +422,7 @@ watch(() => scanner.lastResult.value, handleScannerResult);
 .error {
   color: #fca5a5;
 }
-</style>
+
 .worker-registration {
   margin-top: 1.5rem;
   display: grid;
@@ -374,7 +432,8 @@ watch(() => scanner.lastResult.value, handleScannerResult);
 
 .scanner-box,
 .register-form,
-.close-form {
+.close-form,
+.qr-wrapper {
   background: rgba(15, 23, 42, 0.65);
   border: 1px solid rgba(148, 163, 184, 0.2);
   border-radius: 1.25rem;
@@ -411,6 +470,26 @@ input {
   gap: 0.8rem;
 }
 
+.own-qr {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.6rem 0.8rem;
+  border: 1px dashed rgba(148, 163, 184, 0.35);
+  border-radius: 0.8rem;
+  font-size: 0.9rem;
+}
+
+.own-qr strong {
+  display: block;
+  font-size: 1.1rem;
+}
+
+.use-qr-btn {
+  border-color: rgba(59, 130, 246, 0.6);
+  color: #bfdbfe;
+}
+
 .register-form button,
 .close-form button {
   border: 1px solid rgba(34, 197, 94, 0.5);
@@ -430,3 +509,4 @@ input {
 .warning {
   color: #fde68a;
 }
+</style>

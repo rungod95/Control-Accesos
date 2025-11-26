@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { login } from '../services/authService';
 import { session } from '../stores/session';
@@ -17,24 +17,47 @@ const router = useRouter();
 const route = useRoute();
 const ui = useUi();
 
+const ROLE_HOME = {
+  ADMIN: '/admin',
+  TRABAJADOR: '/trabajador',
+  VISITANTE: '/qr',
+  OPERADOR: '/operador',
+};
+
+function resolveHomeByRole(role) {
+  return ROLE_HOME[role] ?? '/';
+}
+
 async function handleSubmit() {
   error.value = '';
   loading.value = true;
   try {
-    await login(form.value);
-    ui.notifySuccess(`Bienvenido, ${form.value.username}!`);
-    const redirectTo = route.query.redirect ?? '/';
-    router.replace(redirectTo);
+    const data = await login(form.value);
+    ui.notifySuccess(`Bienvenido, ${data.fullName || form.value.username}!`);
+    const redirectTo = route.query.redirect ?? resolveHomeByRole(data.role);
+    await router.replace(redirectTo);
   } catch (err) {
     error.value = err.response?.status === 401
       ? 'Credenciales inválidas'
       : 'No fue posible iniciar sesión';
     ui.notifyError(error.value);
     session.clear();
-  } finally {
     loading.value = false;
+    return;
   }
+
+  loading.value = false;
 }
+
+watch(
+  () => session.isAuthenticated.value,
+  (value) => {
+    if (value && router.currentRoute.value.name === 'login') {
+      const redirectTo = route.query.redirect ?? resolveHomeByRole(session.role.value);
+      router.replace(redirectTo).catch(() => {});
+    }
+  },
+);
 </script>
 
 <template>

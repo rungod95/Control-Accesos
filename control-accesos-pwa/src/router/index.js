@@ -18,19 +18,19 @@ const routes = [
     path: '/trabajador',
     name: 'worker',
     component: WorkerView,
-    meta: { title: 'Área de trabajador', access: 'autenticado', requiresAuth: true },
+    meta: { title: 'Área de trabajador', access: 'autenticado', requiresAuth: true, roles: ['TRABAJADOR', 'ADMIN'] },
   },
   {
     path: '/operador',
     name: 'operator',
     component: OperatorView,
-    meta: { title: 'Área de operador', access: 'autenticado', requiresAuth: true },
+    meta: { title: 'Área de operador', access: 'autenticado', requiresAuth: true, roles: ['OPERADOR', 'ADMIN'] },
   },
   {
     path: '/admin',
     name: 'admin',
     component: AdminView,
-    meta: { title: 'Área de administrador', access: 'autenticado', requiresAuth: true },
+    meta: { title: 'Área de administrador', access: 'autenticado', requiresAuth: true, roles: ['ADMIN'] },
   },
   {
     path: '/qr',
@@ -64,6 +64,14 @@ router.beforeEach((to, from, next) => {
   if (to.meta?.requiresAuth && !session.isAuthenticated.value) {
     next({ name: 'login', query: { redirect: to.fullPath } });
     return;
+  }
+
+  if (to.meta?.roles && to.meta.roles.length > 0) {
+    const role = session.role.value || '';
+    if (!to.meta.roles.includes(role)) {
+      next({ name: 'home' });
+      return;
+    }
   }
 
   if (to.name === 'login' && session.isAuthenticated.value) {
