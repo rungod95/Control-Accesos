@@ -51,6 +51,24 @@ class UserAccountControllerTest {
         assertThat(createRes.getBody().username()).isEqualTo(username);
         assertThat(createRes.getBody().qrCode()).isEqualTo("QR-" + username.toUpperCase());
 
+        UserAccountUpdateRequest updatePayload = new UserAccountUpdateRequest(
+                "TRABAJADOR",
+                "Usuario Actualizado",
+                "",
+                "QR-" + username.toUpperCase() + "-UPDATED"
+        );
+
+        ResponseEntity<UserAccountResponse> updateRes = restTemplate.exchange(
+                "/api/users/" + createRes.getBody().id(),
+                HttpMethod.PUT,
+                new HttpEntity<>(updatePayload, headers),
+                UserAccountResponse.class);
+
+        assertThat(updateRes.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(updateRes.getBody()).isNotNull();
+        assertThat(updateRes.getBody().fullName()).isEqualTo("Usuario Actualizado");
+        assertThat(updateRes.getBody().qrCode()).endsWith("-UPDATED");
+
         ResponseEntity<UserAccountResponse> meRes = restTemplate.exchange(
                 "/api/users/me",
                 HttpMethod.GET,

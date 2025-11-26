@@ -46,7 +46,7 @@ public class UserAccountService {
         user.setRole(role);
         user.setFullName(fullName);
         user.setEnabled(true);
-        user.setQrCode(qrCode);
+        user.setQrCode(StringUtils.hasText(qrCode) ? qrCode.trim() : null);
         return repository.save(user);
     }
 
@@ -54,7 +54,9 @@ public class UserAccountService {
         UserAccount current = findById(id);
         current.setFullName(fullName);
         current.setRole(role);
-        current.setQrCode(qrCode);
+        if (qrCode != null) {
+            current.setQrCode(StringUtils.hasText(qrCode) ? qrCode.trim() : null);
+        }
         if (StringUtils.hasText(rawPassword)) {
             current.setPassword(passwordEncoder.encode(rawPassword));
         }
