@@ -47,6 +47,10 @@ mvn spring-boot:run -Dspring-boot.run.profiles=prod
 }
 ```
 
+## Documentación OpenAPI
+- Swagger UI: http://localhost:8080/swagger-ui.html (perfil dev/prod).
+- JSON OpenAPI: http://localhost:8080/v3/api-docs
+
 ## Git (sugerido)
 ```bash
 git init
