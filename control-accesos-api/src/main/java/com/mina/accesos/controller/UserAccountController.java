@@ -5,6 +5,7 @@ import com.mina.accesos.domain.UserAccount;
 import com.mina.accesos.dto.UserAccountCreateRequest;
 import com.mina.accesos.dto.UserAccountResponse;
 import com.mina.accesos.dto.UserAccountUpdateRequest;
+import com.mina.accesos.dto.PasswordChangeRequest;
 import com.mina.accesos.service.UserAccountService;
 import jakarta.validation.Valid;
 import java.security.Principal;
@@ -13,6 +14,7 @@ import java.util.Locale;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -47,6 +49,13 @@ public class UserAccountController {
     @GetMapping("/me")
     public UserAccountResponse me(Principal principal) {
         return toResponse(userService.findByUsername(principal.getName()));
+    }
+
+    @PostMapping("/me/password")
+    public ResponseEntity<Void> changePassword(Principal principal,
+                                               @Valid @RequestBody PasswordChangeRequest request) {
+        userService.changeOwnPassword(principal.getName(), request.currentPassword(), request.newPassword());
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping

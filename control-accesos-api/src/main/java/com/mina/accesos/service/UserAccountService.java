@@ -66,4 +66,16 @@ public class UserAccountService {
     public void deleteUser(Long id) {
         repository.deleteById(id);
     }
+
+    public void changeOwnPassword(String username, String currentPassword, String newPassword) {
+        UserAccount user = findByUsername(username);
+        if (!passwordEncoder.matches(currentPassword, user.getPassword())) {
+            throw new IllegalArgumentException("Contraseña actual incorrecta");
+        }
+        if (!StringUtils.hasText(newPassword) || newPassword.length() < 6) {
+            throw new IllegalArgumentException("La nueva contraseña debe tener al menos 6 caracteres");
+        }
+        user.setPassword(passwordEncoder.encode(newPassword));
+        repository.save(user);
+    }
 }
