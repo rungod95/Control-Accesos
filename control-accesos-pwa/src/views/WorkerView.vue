@@ -422,7 +422,7 @@ watch(
 .error {
   color: #fca5a5;
 }
-</style>
+
 .worker-registration {
   margin-top: 1.5rem;
   display: grid;
@@ -509,3 +509,4 @@ input {
 .warning {
   color: #fde68a;
 }
+</style>
