@@ -36,10 +36,10 @@ public class AccessLogController {
 
     @GetMapping
     public List<AccessLog> findAll(
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime desde,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime hasta,
-            @RequestParam(required = false) String tipoUsuario,
-            @RequestParam(required = false) String qr) {
+            @RequestParam(name = "desde", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime desde,
+            @RequestParam(name = "hasta", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime hasta,
+            @RequestParam(name = "tipoUsuario", required = false) String tipoUsuario,
+            @RequestParam(name = "qr", required = false) String qr) {
         if (desde != null || hasta != null || tipoUsuario != null || qr != null) {
             return service.search(desde, hasta, tipoUsuario, qr);
         }

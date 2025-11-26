@@ -167,6 +167,25 @@ async function handlePasswordChange() {
     <p v-if="loading">Cargando datos...</p>
     <p v-else-if="error" class="error">{{ error }}</p>
 
+    <div v-if="session.isAuthenticated.value" class="password-card">
+      <h3>Cambiar contraseña</h3>
+      <form @submit.prevent="handlePasswordChange">
+        <label>
+          Contraseña actual
+          <input v-model="passwordForm.currentPassword" type="password" required autocomplete="current-password" />
+        </label>
+        <label>
+          Nueva contraseña
+          <input v-model="passwordForm.newPassword" type="password" required autocomplete="new-password" />
+        </label>
+        <label>
+          Confirmar nueva contraseña
+          <input v-model="passwordForm.confirmPassword" type="password" required autocomplete="new-password" />
+        </label>
+        <button type="submit">Guardar contraseña</button>
+      </form>
+    </div>
+
     <div v-if="recent.length" class="recent">
       <h3>Mis últimos accesos</h3>
       <ul>
@@ -186,24 +205,6 @@ async function handlePasswordChange() {
       </ul>
     </div>
 
-    <div v-if="session.isAuthenticated.value" class="password-card">
-      <h3>Cambiar contraseña</h3>
-      <form @submit.prevent="handlePasswordChange">
-        <label>
-          Contraseña actual
-          <input v-model="passwordForm.currentPassword" type="password" required autocomplete="current-password" />
-        </label>
-        <label>
-          Nueva contraseña
-          <input v-model="passwordForm.newPassword" type="password" required autocomplete="new-password" />
-        </label>
-        <label>
-          Confirmar nueva contraseña
-          <input v-model="passwordForm.confirmPassword" type="password" required autocomplete="new-password" />
-        </label>
-        <button type="submit">Guardar contraseña</button>
-      </form>
-    </div>
   </section>
 </template>
 
