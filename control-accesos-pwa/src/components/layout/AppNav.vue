@@ -1,9 +1,27 @@
 <script setup>
+import { computed } from 'vue';
 import { RouterLink, useRoute } from 'vue-router';
+import { session } from '../../stores/session';
 
 const route = useRoute();
 
-const links = [];
+const ROLE_HOME = {
+  ADMIN: { path: '/admin', label: 'Admin', subtitle: 'Usuarios y accesos', emoji: '🧭' },
+  TRABAJADOR: { path: '/trabajador', label: 'Trabajador', subtitle: 'Mi QR', emoji: '🦺' },
+};
+
+const publicLinks = [
+  { path: '/qr', label: 'QR', subtitle: 'Escanear código', emoji: '👋' },
+  { path: '/login', label: 'Acceso', subtitle: 'Autenticación', emoji: '🔐' },
+];
+
+const links = computed(() => {
+  if (!session.isAuthenticated.value) {
+    return publicLinks;
+  }
+  const roleLink = ROLE_HOME[session.role.value] ? [ROLE_HOME[session.role.value]] : [];
+  return [...roleLink, { path: '/qr', label: 'QR', subtitle: 'Escanear código', emoji: '👋' }];
+});
 
 const isActive = (target) => route.path === target;
 </script>

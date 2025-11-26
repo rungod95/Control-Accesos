@@ -2,7 +2,6 @@ import { createRouter, createWebHistory } from 'vue-router';
 
 import HomeView from '../views/HomeView.vue';
 import WorkerView from '../views/WorkerView.vue';
-import OperatorView from '../views/OperatorView.vue';
 import AdminView from '../views/AdminView.vue';
 import GuestView from '../views/GuestView.vue';
 import LoginView from '../views/LoginView.vue';
@@ -19,12 +18,6 @@ const routes = [
     name: 'worker',
     component: WorkerView,
     meta: { title: 'Área de trabajador', access: 'autenticado', requiresAuth: true, roles: ['TRABAJADOR', 'ADMIN'] },
-  },
-  {
-    path: '/operador',
-    name: 'operator',
-    component: OperatorView,
-    meta: { title: 'Área de operador', access: 'autenticado', requiresAuth: true, roles: ['OPERADOR', 'ADMIN'] },
   },
   {
     path: '/admin',

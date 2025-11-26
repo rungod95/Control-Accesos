@@ -13,19 +13,6 @@ export const roles = [
     ],
   },
   {
-    id: 'operator',
-    name: 'Operador',
-    emoji: '🛠️',
-    description: 'Controla las entradas activas, valida accesos y genera reportes operativos.',
-    access: 'Autenticado',
-    route: '/operador',
-    responsibilities: [
-      'Supervisar panel en tiempo real',
-      'Forzar cierre de accesos si es necesario',
-      'Generar reportes CSV/PDF',
-    ],
-  },
-  {
     id: 'admin',
     name: 'Administrador',
     emoji: '🧭',
