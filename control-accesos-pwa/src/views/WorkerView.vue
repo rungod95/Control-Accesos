@@ -2,7 +2,7 @@
 import { ref, watch, onMounted, computed } from 'vue';
 import RoleSection from '../components/RoleSection.vue';
 import UserQrCard from '../components/UserQrCard.vue';
-import { searchAccessLogs } from '../services/accessLogService';
+import { searchAccessLogs, fetchRecent } from '../services/accessLogService';
 import { useSession } from '../stores/session';
 import { useUi } from '../stores/ui';
 
@@ -36,16 +36,26 @@ async function loadData({ silent = false } = {}) {
   error.value = '';
   try {
     const qrFilter = session.qrCode.value;
-    const data = await searchAccessLogs({ qr: qrFilter });
+    let data = [];
+    try {
+      data = await searchAccessLogs({ qr: qrFilter });
+    } catch (innerErr) {
+      // fallback a recientes globales si el endpoint filtrado falla
+      const recentGlobal = await fetchRecent(10);
+      data = recentGlobal.filter((item) => !qrFilter || item.qrCode === qrFilter);
+      if (!data.length) {
+        throw innerErr;
+      }
+    }
     const sorted = [...data].sort((a, b) => new Date(b.fechaHoraEntrada) - new Date(a.fechaHoraEntrada));
     recent.value = sorted.slice(0, 5);
     if (!silent) {
       ui.notifySuccess('Tus accesos se han actualizado');
     }
   } catch (err) {
-    error.value = err.response?.status === 403
-      ? 'Tu rol no tiene acceso a estos datos.'
-      : 'No fue posible cargar tus accesos.';
+    const message = err.response?.data?.error
+      ?? (err.response?.status === 403 ? 'Tu rol no tiene acceso a estos datos.' : 'No fue posible cargar tus accesos.');
+    error.value = message;
   } finally {
     loading.value = false;
   }
