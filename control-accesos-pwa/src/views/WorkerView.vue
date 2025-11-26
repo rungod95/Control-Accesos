@@ -2,10 +2,9 @@
 import { ref, watch, onMounted, onBeforeUnmount, computed } from 'vue';
 import RoleSection from '../components/RoleSection.vue';
 import UserQrCard from '../components/UserQrCard.vue';
-import { fetchSummary, fetchRecent, fetchActive } from '../services/accessLogService';
+import { searchAccessLogs } from '../services/accessLogService';
 import { useSession } from '../stores/session';
 import { useUi } from '../stores/ui';
-import { useQrScanner } from '../composables/useQrScanner';
 import { offlineQueue, addPending, flushQueue, loadQueue } from '../stores/offlineQueue';
 import { processAccessEntry } from '../services/offlineSyncService';
 
@@ -21,7 +20,6 @@ const checklist = [
   'Historial resumido de las últimas visitas',
 ];
 
-const summary = ref(null);
 const recent = ref([]);
 const activeOpen = ref([]);
 const loading = ref(false);
@@ -29,16 +27,6 @@ const error = ref('');
 
 const session = useSession();
 const ui = useUi();
-const {
-  videoInputDevices,
-  selectedDeviceId,
-  scanning,
-  lastResult,
-  error: scannerError,
-  startScan,
-  stopScan,
-} = useQrScanner();
-
 const registerForm = ref({
   motivo: '',
   qrCode: session.qrCode.value || '',
@@ -60,29 +48,25 @@ function formatLocalDateTime(date = new Date()) {
 
 async function loadData({ silent = false } = {}) {
   if (!session.isAuthenticated.value) {
-    summary.value = null;
     recent.value = [];
+    activeOpen.value = [];
     return;
   }
-
   loading.value = true;
   error.value = '';
   try {
-    const [summaryData, recentData, activeData] = await Promise.all([
-      fetchSummary(),
-      fetchRecent(5),
-      fetchActive(),
-    ]);
-    summary.value = summaryData;
-    recent.value = recentData;
-    activeOpen.value = activeData;
+    const qrFilter = session.qrCode.value || registerForm.value.qrCode;
+    const data = await searchAccessLogs({ qr: qrFilter });
+    const sorted = [...data].sort((a, b) => new Date(b.fechaHoraEntrada) - new Date(a.fechaHoraEntrada));
+    recent.value = sorted.slice(0, 5);
+    activeOpen.value = sorted.filter((item) => !item.fechaHoraSalida);
     if (!silent) {
-      ui.notifySuccess('Resumen de accesos actualizado');
+      ui.notifySuccess('Tus accesos se han actualizado');
     }
   } catch (err) {
     error.value = err.response?.status === 403
-      ? 'Tu rol no tiene acceso a los datos de accesos.'
-      : 'No fue posible cargar la información.';
+      ? 'Tu rol no tiene acceso a estos datos.'
+      : 'No fue posible cargar tus accesos.';
   } finally {
     loading.value = false;
   }
@@ -160,12 +144,6 @@ async function handleClose() {
   }
 }
 
-function handleScannerResult() {
-  if (lastResult.value) {
-    registerForm.value.qrCode = lastResult.value;
-  }
-}
-
 function useOwnQr() {
   if (session.qrCode.value) {
     registerForm.value.qrCode = session.qrCode.value;
@@ -178,7 +156,6 @@ let flushInterval;
 
 onMounted(async () => {
   await loadQueue();
-  startScan('worker-qr-video').catch(() => {});
   flushInterval = setInterval(async () => {
     if (navigator.onLine && offlineQueue.state.pending.length > 0 && !syncing.value) {
       try {
@@ -197,7 +174,6 @@ onBeforeUnmount(() => {
   }
 });
 
-watch(() => lastResult.value, handleScannerResult);
 watch(
   () => session.qrCode.value,
   (value) => {
@@ -219,37 +195,13 @@ watch(
   />
 
   <section class="worker-registration" v-if="session.isAuthenticated.value">
-    <div class="scanner-box">
-      <video id="worker-qr-video" playsinline></video>
-      <div class="scanner-controls">
-        <label>
-          Cámara
-          <select v-model="selectedDeviceId">
-            <option v-for="device in videoInputDevices" :key="device.deviceId" :value="device.deviceId">
-              {{ device.label || 'Cámara' }}
-            </option>
-          </select>
-        </label>
-        <button type="button" @click="scanning ? stopScan() : startScan('worker-qr-video')">
-          {{ scanning ? 'Detener' : 'Escanear' }}
-        </button>
-      </div>
-      <p v-if="scannerError" class="error">{{ scannerError }}</p>
-    </div>
-
     <div class="qr-wrapper">
       <UserQrCard
         :value="assignedQr"
         label="Mi QR personal"
         :download-name="qrDownloadName"
       />
-    </div>
-
-    <form class="register-form" @submit.prevent="handleRegister">
-      <label>
-        QR detectado / manual
-        <input v-model="registerForm.qrCode" placeholder="QR-TRAB-001" />
-      </label>
+      <p class="hint">Descarga tu QR y preséntalo en el control de acceso para registrar entrada/salida.</p>
       <div class="own-qr">
         <div>
           <span>Mi QR asignado</span>
@@ -261,14 +213,21 @@ watch(
           @click="useOwnQr"
           :disabled="!hasAssignedQr"
         >
-          Usar mi QR
+          Copiar/usar mi QR
         </button>
       </div>
+    </div>
+
+    <form class="register-form" @submit.prevent="handleRegister">
+      <label>
+        QR (manual)
+        <input v-model="registerForm.qrCode" placeholder="QR-TRAB-001" />
+      </label>
       <label>
         Motivo
         <input v-model="registerForm.motivo" placeholder="Inicio de turno" />
       </label>
-      <button type="submit">Registrar acceso</button>
+      <button type="submit">Registrar entrada manual</button>
       <p v-if="offlineQueue.state.pending.length" class="warning">
         {{ offlineQueue.state.pending.length }} acceso(s) pendiente(s) por sincronizar.
       </p>
@@ -276,7 +235,7 @@ watch(
 
     <form class="close-form" @submit.prevent="handleClose">
       <label>
-        Accesos abiertos
+        Accesos abiertos (sólo los tuyos)
         <select v-model="closeForm.accessId">
           <option value="" disabled>Selecciona un acceso</option>
           <option
@@ -303,23 +262,8 @@ watch(
     <p v-if="loading">Cargando datos...</p>
     <p v-else-if="error" class="error">{{ error }}</p>
 
-    <div v-else class="widgets" v-if="summary">
-      <article>
-        <span>Activos</span>
-        <strong>{{ summary.activos }}</strong>
-      </article>
-      <article>
-        <span>Total hoy</span>
-        <strong>{{ summary.hoy }}</strong>
-      </article>
-      <article>
-        <span>Últimos 7 días</span>
-        <strong>{{ summary.ultimaSemana }}</strong>
-      </article>
-    </div>
-
     <div v-if="recent.length" class="recent">
-      <h3>Últimos accesos</h3>
+      <h3>Mis últimos accesos</h3>
       <ul>
         <li v-for="item in recent" :key="item.id">
           <div>
