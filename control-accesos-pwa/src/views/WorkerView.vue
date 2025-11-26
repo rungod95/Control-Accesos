@@ -5,6 +5,7 @@ import UserQrCard from '../components/UserQrCard.vue';
 import { searchAccessLogs, fetchRecent } from '../services/accessLogService';
 import { useSession } from '../stores/session';
 import { useUi } from '../stores/ui';
+import { changePassword } from '../services/accountService';
 
 const actions = [
   'Login JWT y refresco del token',
@@ -26,6 +27,11 @@ const ui = useUi();
 const assignedQr = computed(() => session.qrCode.value || '');
 const hasAssignedQr = computed(() => Boolean(session.qrCode.value));
 const qrDownloadName = computed(() => `${session.username.value || 'mi-qr'}.png`);
+const passwordForm = ref({
+  currentPassword: '',
+  newPassword: '',
+  confirmPassword: '',
+});
 
 async function loadData({ silent = false } = {}) {
   if (!session.isAuthenticated.value) {
@@ -93,6 +99,30 @@ watch(
     }
   },
 );
+
+async function handlePasswordChange() {
+  if (!passwordForm.value.newPassword || passwordForm.value.newPassword.length < 6) {
+    ui.notifyWarning('La nueva contraseña debe tener al menos 6 caracteres.');
+    return;
+  }
+  if (passwordForm.value.newPassword !== passwordForm.value.confirmPassword) {
+    ui.notifyWarning('La confirmación no coincide.');
+    return;
+  }
+  try {
+    await changePassword({
+      currentPassword: passwordForm.value.currentPassword,
+      newPassword: passwordForm.value.newPassword,
+    });
+    ui.notifySuccess('Contraseña actualizada.');
+    passwordForm.value.currentPassword = '';
+    passwordForm.value.newPassword = '';
+    passwordForm.value.confirmPassword = '';
+  } catch (err) {
+    const msg = err.response?.data?.error ?? 'No se pudo cambiar la contraseña';
+    ui.notifyError(msg);
+  }
+}
 </script>
 
 <template>
@@ -154,6 +184,25 @@ watch(
           </div>
         </li>
       </ul>
+    </div>
+
+    <div v-if="session.isAuthenticated.value" class="password-card">
+      <h3>Cambiar contraseña</h3>
+      <form @submit.prevent="handlePasswordChange">
+        <label>
+          Contraseña actual
+          <input v-model="passwordForm.currentPassword" type="password" required autocomplete="current-password" />
+        </label>
+        <label>
+          Nueva contraseña
+          <input v-model="passwordForm.newPassword" type="password" required autocomplete="new-password" />
+        </label>
+        <label>
+          Confirmar nueva contraseña
+          <input v-model="passwordForm.confirmPassword" type="password" required autocomplete="new-password" />
+        </label>
+        <button type="submit">Guardar contraseña</button>
+      </form>
     </div>
   </section>
 </template>
@@ -310,5 +359,37 @@ watch(
 
 .muted {
   color: var(--muted-color);
+}
+
+.password-card {
+  margin-top: 1.5rem;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 1rem;
+  padding: 1rem;
+}
+
+.password-card form {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.password-card input {
+  width: 100%;
+  padding: 0.55rem;
+  border-radius: 0.7rem;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  background: transparent;
+  color: inherit;
+}
+
+.password-card button {
+  width: fit-content;
+  border: 1px solid rgba(59, 130, 246, 0.6);
+  background: transparent;
+  color: #bfdbfe;
+  padding: 0.5rem 0.8rem;
+  border-radius: 0.75rem;
+  cursor: pointer;
 }
 </style>
