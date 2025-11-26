@@ -6,14 +6,14 @@ import { scanVisitor } from '../services/accessLogService';
 import { useUi } from '../stores/ui';
 
 const actions = [
-  'Escanear o introducir manualmente el QR temporal recibido',
+  'Escanear o introducir manualmente el QR recibido (visitante o personal)',
   'Leer instrucciones de seguridad antes de entrar',
   'Mostrar código QR en modo alto contraste',
 ];
 
 const checklist = [
   'No requiere autenticación',
-  'Confirmación por SMS o email con código extra',
+  'Funciona online y permite entrada/salida con el mismo QR',
   'Redirección automática al panel del operador tras validar',
 ];
 
@@ -84,9 +84,9 @@ onMounted(() => {
 
 <template>
   <RoleSection
-    title="Visitantes y contratistas"
+    title="Validación de QR"
     emoji="👋"
-    description="Flujo público pensado para personas externas. Reciben un enlace PWA para mostrar su QR temporal incluso sin conexión."
+    description="Escanea o introduce un QR para registrar entrada/salida. Úsalo con QRs de visitantes o personal."
     access-type="Público"
     :actions="actions"
     :checklist="checklist"
