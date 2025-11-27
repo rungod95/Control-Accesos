@@ -122,6 +122,8 @@ async function saveQr(user) {
   try {
     const updated = await updateUser(user.id, payload);
     user.qrCode = updated.qrCode;
+    user.fullName = updated.fullName;
+    user.role = updated.role;
     editingUserId.value = null;
     qrEditValue.value = '';
     ui.notifySuccess(`QR de ${user.username} actualizado`);
@@ -156,9 +158,12 @@ async function handleCreateUser() {
       .replace(/\s+/g, '-')
       .toUpperCase();
 
+    const finalUsername = isVisitor.value ? '' : username;
+    const finalPassword = isVisitor.value ? '' : password;
+
     const payload = {
-      username,
-      password,
+      username: finalUsername || username,
+      password: finalPassword || password,
       role: userForm.value.role || 'VISITANTE',
       fullName: userForm.value.fullName,
       qrCode,
@@ -166,8 +171,8 @@ async function handleCreateUser() {
     const created = await createUser(payload);
     users.value.push(created);
     lastCreated.value = {
-      username,
-      password,
+      username: payload.username,
+      password: payload.password,
       qrCode,
       fullName: created.fullName,
       role: payload.role,
@@ -235,8 +240,8 @@ async function handleCreateUser() {
       <p><strong>Último usuario creado</strong></p>
       <p>Nombre: {{ lastCreated.fullName }}</p>
       <p>Rol: {{ lastCreated.role }}</p>
-      <p v-if="!isVisitor">Usuario: <code>{{ lastCreated.username }}</code></p>
-      <p v-if="!isVisitor">Contraseña temporal: <code>{{ lastCreated.password }}</code></p>
+      <p v-if="lastCreated.username">Usuario: <code>{{ lastCreated.username }}</code></p>
+      <p v-if="lastCreated.password">Contraseña temporal: <code>{{ lastCreated.password }}</code></p>
       <p>QR asignado: <code>{{ lastCreated.qrCode }}</code></p>
       <UserQrCard
         :value="lastCreated.qrCode"
