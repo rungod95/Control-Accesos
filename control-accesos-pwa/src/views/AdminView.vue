@@ -41,6 +41,10 @@ const creatingVisitor = ref(false);
 const lastCreated = ref(null);
 
 const isVisitor = computed(() => userForm.value.role === 'VISITANTE');
+const createCta = computed(() => {
+  const label = roleOptions.find((r) => r.value === userForm.value.role)?.label ?? 'usuario';
+  return `Crear ${label.toLowerCase()}`;
+});
 
 const session = useSession();
 const ui = useUi();
@@ -80,8 +84,17 @@ watch(
 );
 
 async function handleClose(id) {
+  const access = activeAccesses.value.find((item) => item.id === id);
+  if (!access) {
+    ui.notifyWarning('No se encontró el acceso seleccionado.');
+    return;
+  }
   try {
-    await closeAccess(id, { fechaHoraSalida: new Date().toISOString() });
+    const body = {
+      ...access,
+      fechaHoraSalida: new Date().toISOString(),
+    };
+    await closeAccess(id, body);
     ui.notifySuccess('Acceso cerrado');
     await loadData({ silent: true });
   } catch (err) {
@@ -215,7 +228,7 @@ async function handleCreateUser() {
         <input v-model="userForm.qrCode" placeholder="QR-USER-001" />
       </label>
       <button type="submit" class="create-btn" :disabled="creatingVisitor">
-        {{ creatingVisitor ? 'Generando...' : 'Crear visitante' }}
+        {{ creatingVisitor ? 'Generando...' : createCta }}
       </button>
     </form>
     <div v-if="lastCreated" class="visitor-summary">
