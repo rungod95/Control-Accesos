@@ -7,6 +7,12 @@ import { fetchActive, closeAccess } from '../services/accessLogService';
 import { useSession } from '../stores/session';
 import { useUi } from '../stores/ui';
 
+const roleOptions = [
+  { value: 'VISITANTE', label: 'Visitante' },
+  { value: 'TRABAJADOR', label: 'Trabajador' },
+  { value: 'ADMIN', label: 'Admin' },
+];
+
 const actions = [
   'Gestión de usuarios, roles y permisos',
   'Generación de QR (permanentes y temporales)',
@@ -33,6 +39,8 @@ const userForm = ref({
 });
 const creatingVisitor = ref(false);
 const lastCreated = ref(null);
+
+const isVisitor = computed(() => userForm.value.role === 'VISITANTE');
 
 const session = useSession();
 const ui = useUi();
@@ -182,17 +190,25 @@ async function handleCreateUser() {
         Nombre completo
         <input v-model="userForm.fullName" placeholder="Nombre Apellido" required />
       </label>
+      <div class="roles">
+        <button
+          v-for="option in roleOptions"
+          :key="option.value"
+          type="button"
+          class="role-chip"
+          :class="{ active: userForm.role === option.value }"
+          @click="userForm.role = option.value"
+        >
+          {{ option.label }}
+        </button>
+      </div>
       <label>
-        Identificador (opcional)
-        <input v-model="userForm.username" placeholder="usuario-corporativo" />
-      </label>
-      <label>
-        Rol
-        <select v-model="userForm.role" required>
-          <option value="VISITANTE">Visitante</option>
-          <option value="TRABAJADOR">Trabajador</option>
-          <option value="ADMIN">Admin</option>
-        </select>
+        Identificador interno (opcional)
+        <input
+          v-model="userForm.username"
+          :placeholder="isVisitor ? 'Autogenerado para visitante' : 'usuario-corporativo'"
+          :disabled="isVisitor"
+        />
       </label>
       <label>
         QR personalizado (opcional)
@@ -206,8 +222,8 @@ async function handleCreateUser() {
       <p><strong>Último usuario creado</strong></p>
       <p>Nombre: {{ lastCreated.fullName }}</p>
       <p>Rol: {{ lastCreated.role }}</p>
-      <p>Usuario: <code>{{ lastCreated.username }}</code></p>
-      <p>Contraseña temporal: <code>{{ lastCreated.password }}</code></p>
+      <p v-if="!isVisitor">Usuario: <code>{{ lastCreated.username }}</code></p>
+      <p v-if="!isVisitor">Contraseña temporal: <code>{{ lastCreated.password }}</code></p>
       <p>QR asignado: <code>{{ lastCreated.qrCode }}</code></p>
       <UserQrCard
         :value="lastCreated.qrCode"
@@ -443,6 +459,26 @@ tbody tr {
 .create-btn:disabled {
   opacity: 0.6;
   cursor: wait;
+}
+
+.roles {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.role-chip {
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  background: rgba(15, 23, 42, 0.4);
+  color: inherit;
+  padding: 0.35rem 0.8rem;
+  border-radius: 0.8rem;
+  cursor: pointer;
+}
+
+.role-chip.active {
+  border-color: rgba(59, 130, 246, 0.7);
+  background: rgba(59, 130, 246, 0.15);
 }
 
 .close-btn {
