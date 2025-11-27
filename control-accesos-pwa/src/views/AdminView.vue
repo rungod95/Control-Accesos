@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch } from 'vue';
+import { ref, watch, computed } from 'vue';
 import RoleSection from '../components/RoleSection.vue';
 import UserQrCard from '../components/UserQrCard.vue';
 import { fetchUsers, updateUser, createUser } from '../services/userService';
