@@ -158,12 +158,9 @@ async function handleCreateUser() {
       .replace(/\s+/g, '-')
       .toUpperCase();
 
-    const finalUsername = isVisitor.value ? '' : username;
-    const finalPassword = isVisitor.value ? '' : password;
-
     const payload = {
-      username: finalUsername || username,
-      password: finalPassword || password,
+      username,
+      password,
       role: userForm.value.role || 'VISITANTE',
       fullName: userForm.value.fullName,
       qrCode,
@@ -171,8 +168,8 @@ async function handleCreateUser() {
     const created = await createUser(payload);
     users.value.push(created);
     lastCreated.value = {
-      username: payload.username,
-      password: payload.password,
+      username: payload.role === 'VISITANTE' ? '' : payload.username,
+      password: payload.role === 'VISITANTE' ? '' : payload.password,
       qrCode,
       fullName: created.fullName,
       role: payload.role,
