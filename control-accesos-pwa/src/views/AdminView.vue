@@ -2,7 +2,7 @@
 import { ref, watch, computed } from 'vue';
 import RoleSection from '../components/RoleSection.vue';
 import UserQrCard from '../components/UserQrCard.vue';
-import { fetchUsers, updateUser, createUser } from '../services/userService';
+import { fetchUsers, updateUser, createUser, deleteUser } from '../services/userService';
 import { fetchActive, closeAccess } from '../services/accessLogService';
 import { useSession } from '../stores/session';
 import { useUi } from '../stores/ui';
@@ -30,7 +30,14 @@ const activeAccesses = ref([]);
 const loading = ref(false);
 const error = ref('');
 const editingUserId = ref(null);
-const qrEditValue = ref('');
+const editingUserDraft = ref({
+  fullName: '',
+  role: 'VISITANTE',
+  qrCode: '',
+  password: '',
+});
+const savingUserId = ref(null);
+const deletingUserId = ref(null);
 const userForm = ref({
   fullName: '',
   username: '',
@@ -102,33 +109,59 @@ async function handleClose(id) {
   }
 }
 
-function startEditQr(user) {
+function startEditUser(user) {
   editingUserId.value = user.id;
-  qrEditValue.value = user.qrCode || '';
-}
-
-function cancelEditQr() {
-  editingUserId.value = null;
-  qrEditValue.value = '';
-}
-
-async function saveQr(user) {
-  const payload = {
+  editingUserDraft.value = {
+    fullName: user.fullName || '',
     role: user.role,
-    fullName: user.fullName,
+    qrCode: user.qrCode || '',
     password: '',
-    qrCode: qrEditValue.value.trim() || null,
   };
+}
+
+function cancelEditUser() {
+  editingUserId.value = null;
+  editingUserDraft.value = { fullName: '', role: 'VISITANTE', qrCode: '', password: '' };
+}
+
+async function saveUser(user) {
+  const payload = {
+    role: editingUserDraft.value.role || user.role,
+    fullName: editingUserDraft.value.fullName,
+    password: editingUserDraft.value.password || null,
+    qrCode: editingUserDraft.value.qrCode || null,
+  };
+  savingUserId.value = user.id;
   try {
     const updated = await updateUser(user.id, payload);
-    user.qrCode = updated.qrCode;
     user.fullName = updated.fullName;
     user.role = updated.role;
-    editingUserId.value = null;
-    qrEditValue.value = '';
-    ui.notifySuccess(`QR de ${user.username} actualizado`);
+    user.qrCode = updated.qrCode;
+    ui.notifySuccess(`Usuario ${user.username} actualizado`);
+    cancelEditUser();
   } catch (err) {
-    ui.notifyError('No se pudo actualizar el QR');
+    ui.notifyError('No se pudo actualizar el usuario');
+  } finally {
+    savingUserId.value = null;
+  }
+}
+
+async function removeUser(userId) {
+  const confirmDelete = window.confirm('¿Eliminar este usuario?');
+  if (!confirmDelete) return;
+
+  deletingUserId.value = userId;
+  try {
+    await deleteUser(userId);
+    users.value = users.value.filter((u) => u.id !== userId);
+    if (editingUserId.value === userId) {
+      cancelEditUser();
+    }
+    ui.notifySuccess('Usuario eliminado');
+  } catch (err) {
+    ui.notifyError('No se pudo eliminar el usuario');
+  } finally {
+    deletingUserId.value = null;
   }
 }
 
@@ -217,14 +250,16 @@ async function handleCreateUser() {
           {{ option.label }}
         </button>
       </div>
-      <label>
+      <label v-if="!isVisitor">
         Identificador interno (opcional)
         <input
           v-model="userForm.username"
-          :placeholder="isVisitor ? 'Autogenerado para visitante' : 'usuario-corporativo'"
-          :disabled="isVisitor"
+          placeholder="usuario-corporativo"
         />
       </label>
+      <p v-else class="helper">
+        El usuario y contraseña se generan automáticamente para visitantes.
+      </p>
       <label>
         QR personalizado (opcional)
         <input v-model="userForm.qrCode" placeholder="QR-USER-001" />
@@ -263,13 +298,32 @@ async function handleCreateUser() {
           <th>Rol</th>
           <th>Estado</th>
           <th>QR</th>
+          <th>Acciones</th>
         </tr>
       </thead>
       <tbody>
         <tr v-for="user in users" :key="user.id">
           <td>{{ user.username }}</td>
-          <td>{{ user.fullName || 'Sin nombre' }}</td>
-          <td class="badge">{{ user.role }}</td>
+          <td>
+            <template v-if="editingUserId === user.id">
+              <input v-model="editingUserDraft.fullName" placeholder="Nombre Apellido" />
+            </template>
+            <template v-else>
+              {{ user.fullName || 'Sin nombre' }}
+            </template>
+          </td>
+          <td>
+            <template v-if="editingUserId === user.id">
+              <select v-model="editingUserDraft.role">
+                <option v-for="option in roleOptions" :key="option.value" :value="option.value">
+                  {{ option.label }}
+                </option>
+              </select>
+            </template>
+            <template v-else>
+              <span class="badge">{{ user.role }}</span>
+            </template>
+          </td>
           <td>
             <span :class="user.enabled ? 'pill success' : 'pill danger'">
               {{ user.enabled ? 'Activo' : 'Bloqueado' }}
@@ -277,15 +331,41 @@ async function handleCreateUser() {
           </td>
           <td>
             <div v-if="editingUserId === user.id" class="qr-editor">
-              <input v-model="qrEditValue" placeholder="QR-USER-001" />
-              <div class="qr-actions">
-                <button type="button" class="save-btn" @click="saveQr(user)">Guardar</button>
-                <button type="button" class="link-btn" @click="cancelEditQr">Cancelar</button>
-              </div>
+              <input v-model="editingUserDraft.qrCode" placeholder="QR-USER-001" />
             </div>
             <div v-else class="qr-display">
               <span>{{ user.qrCode || '—' }}</span>
-              <button type="button" class="link-btn" @click="startEditQr(user)">Editar</button>
+            </div>
+          </td>
+          <td class="actions">
+            <div v-if="editingUserId === user.id" class="row-actions">
+              <input
+                v-model="editingUserDraft.password"
+                placeholder="Resetear contraseña (opcional)"
+                type="password"
+              />
+              <div class="qr-actions">
+                <button
+                  type="button"
+                  class="save-btn"
+                  :disabled="savingUserId === user.id"
+                  @click="saveUser(user)"
+                >
+                  {{ savingUserId === user.id ? 'Guardando...' : 'Guardar' }}
+                </button>
+                <button type="button" class="link-btn" @click="cancelEditUser">Cancelar</button>
+              </div>
+            </div>
+            <div v-else class="row-actions">
+              <button type="button" class="link-btn" @click="startEditUser(user)">Editar</button>
+              <button
+                type="button"
+                class="danger-btn"
+                :disabled="deletingUserId === user.id"
+                @click="removeUser(user.id)"
+              >
+                {{ deletingUserId === user.id ? 'Eliminando...' : 'Eliminar' }}
+              </button>
             </div>
           </td>
         </tr>
@@ -412,6 +492,28 @@ tbody tr {
   color: inherit;
 }
 
+.row-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.actions {
+  min-width: 200px;
+}
+
+.actions input,
+.actions select,
+.row-actions input,
+.row-actions select {
+  width: 100%;
+  padding: 0.4rem 0.6rem;
+  border-radius: 0.5rem;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  background: rgba(15, 23, 42, 0.4);
+  color: inherit;
+}
+
 .qr-actions {
   display: flex;
   gap: 0.4rem;
@@ -430,6 +532,21 @@ tbody tr {
   background: transparent;
   color: #93c5fd;
   cursor: pointer;
+}
+
+.danger-btn {
+  border: 1px solid rgba(248, 113, 113, 0.6);
+  background: transparent;
+  color: #fecaca;
+  padding: 0.3rem 0.6rem;
+  border-radius: 0.6rem;
+  cursor: pointer;
+}
+
+.helper {
+  font-size: 0.9rem;
+  color: var(--muted-color);
+  margin: 0;
 }
 
 .visitor-card {
