@@ -61,7 +61,7 @@ class AccessLogControllerTest {
 
         assertThat(recent.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(recent.getBody()).isNotNull().hasSize(1);
-        LinkedHashMap<String, Object> item = recent.getBody().getFirst();
+        LinkedHashMap<String, Object> item = recent.getBody().get(0);
         assertThat(item).containsKeys("id", "nombrePersona", "tipoUsuario", "fechaHoraEntrada");
     }
 
