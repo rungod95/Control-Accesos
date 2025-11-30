@@ -3,7 +3,7 @@
 Repositorio monorepo del PFG (DAM): incluye la API Spring Boot y la PWA en Vue 3/Vite para gestionar los accesos a la mina mediante QR, roles y funcionamiento offline.
 
 ## Estructura
-- `control-accesos-api/`: backend (Java 17 + Spring Boot 3, perfiles `dev`/`prod`, seeds en H2/MySQL). Ejecuta Maven y los tests desde esta carpeta.
+- `control-accesos-api/`: backend (Java 17 + Spring Boot 3, perfiles `dev`/`prod`, seeds en H2/PostgreSQL). Ejecuta Maven y los tests desde esta carpeta.
 - `control-accesos-pwa/`: frontend (Vue 3 + Vite + PWA shell, rutas por rol y sincronización offline).
 - `documentos/`: entregables del proyecto y material de referencia.
 - `README_PROGRESS.md`: notas diarias con el estado de las features en curso.
@@ -16,9 +16,15 @@ Repositorio monorepo del PFG (DAM): incluye la API Spring Boot y la PWA en Vue 3
 - Frontend (build): `cd control-accesos-pwa && npm run build`
 
 ## Docker / Compose
-- Arrancar stack completo (PostgreSQL + API + PWA): `docker-compose up --build`
-- Variables principales: `DB_NAME`, `DB_USER`, `DB_PASSWORD` (Postgres), `JWT_SECRET`, `VITE_API_BASE_URL` (build de la PWA).
-- Servicios: `db` (Postgres 16, puerto 5432), `api` (Spring Boot perfil `prod`, puerto 8080), `pwa` (Nginx sirviendo build, puerto 5173).
+- Arrancar stack completo (PostgreSQL + API + PWA): `docker compose up -d --build`
+- Variables principales (se pueden exportar antes de levantar):
+  - `DB_NAME`, `DB_USER`, `DB_PASSWORD` (Postgres)
+  - `JWT_SECRET`
+  - `VITE_API_BASE_URL` (por defecto `http://localhost:8080` para la PWA)
+- Servicios y puertos:
+  - `db`: Postgres 16 (`5432:5432`)
+  - `api`: Spring Boot perfil `prod` (`8080:8080`)
+  - `pwa`: Nginx sirviendo el build (`5173:80`)
 
 ## Documentación detallada
 - API: `control-accesos-api/README.md`
