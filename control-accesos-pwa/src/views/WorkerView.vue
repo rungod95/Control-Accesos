@@ -320,6 +320,7 @@ async function handlePasswordChange() {
   border: 1px dashed rgba(148, 163, 184, 0.35);
   border-radius: 0.8rem;
   font-size: 0.9rem;
+  background: linear-gradient(90deg, rgba(59, 130, 246, 0.08), rgba(15, 23, 42, 0.8));
 }
 
 .own-qr strong {
@@ -328,8 +329,10 @@ async function handlePasswordChange() {
 }
 
 .use-qr-btn {
-  border-color: rgba(59, 130, 246, 0.6);
-  color: #bfdbfe;
+  border-color: rgba(59, 130, 246, 0.9);
+  background: rgba(15, 23, 42, 0.9);
+  color: #e0f2fe;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
 }
 
 .access-details {
