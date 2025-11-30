@@ -9,6 +9,7 @@ const form = ref({
   username: '',
   password: '',
 });
+const showPassword = ref(false);
 
 const loading = ref(false);
 const error = ref('');
@@ -83,11 +84,18 @@ watch(
         Contraseña
         <input
           v-model="form.password"
-          type="password"
+          :type="showPassword ? 'text' : 'password'"
           placeholder="••••••••"
           required
           autocomplete="current-password"
         />
+        <button
+          type="button"
+          class="toggle"
+          @click="showPassword = !showPassword"
+        >
+          {{ showPassword ? 'Ocultar' : 'Ver' }}
+        </button>
       </label>
 
       <button type="submit" :disabled="loading">
@@ -130,6 +138,7 @@ label {
   flex-direction: column;
   font-size: 0.95rem;
   gap: 0.3rem;
+  position: relative;
 }
 
 input {
@@ -138,6 +147,17 @@ input {
   border: 1px solid rgba(148, 163, 184, 0.5);
   background: rgba(15, 23, 42, 0.7);
   color: #f8fafc;
+}
+
+.toggle {
+  position: absolute;
+  right: 0.65rem;
+  bottom: 0.65rem;
+  border: none;
+  background: transparent;
+  color: #bfdbfe;
+  cursor: pointer;
+  font-size: 0.9rem;
 }
 
 button {
