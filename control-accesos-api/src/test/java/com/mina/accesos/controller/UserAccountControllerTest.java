@@ -3,6 +3,7 @@ package com.mina.accesos.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mina.accesos.dto.AuthResponse;
 import com.mina.accesos.dto.LoginRequest;
+import com.mina.accesos.dto.PasswordChangeRequest;
 import com.mina.accesos.dto.UserAccountCreateRequest;
 import com.mina.accesos.dto.UserAccountResponse;
 import com.mina.accesos.dto.UserAccountUpdateRequest;
@@ -84,6 +85,46 @@ class UserAccountControllerTest {
         assertThat(meRes.getBody()).isNotNull();
         assertThat(meRes.getBody().username()).isEqualTo("admin");
         assertThat(meRes.getBody().qrCode()).isNotBlank();
+    }
+
+    @Test
+    void shouldChangeOwnPasswordAndRejectWrongCurrent() {
+        String token = obtainAdminToken();
+        HttpHeaders headers = authHeaders(token);
+
+        PasswordChangeRequest validChange = new PasswordChangeRequest("admin123", "nuevaClave!123");
+        ResponseEntity<Void> changeRes = restTemplate.exchange(
+                "/api/users/me/password",
+                HttpMethod.POST,
+                new HttpEntity<>(validChange, headers),
+                Void.class);
+
+        assertThat(changeRes.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+
+        ResponseEntity<AuthResponse> relogin = restTemplate.postForEntity(
+                "/auth/login",
+                new LoginRequest("admin", "nuevaClave!123"),
+                AuthResponse.class);
+        assertThat(relogin.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(relogin.getBody()).isNotNull();
+
+        // Restaurar la contraseña original para no afectar otros tests
+        HttpHeaders newHeaders = authHeaders(relogin.getBody().token());
+        PasswordChangeRequest restore = new PasswordChangeRequest("nuevaClave!123", "admin123");
+        ResponseEntity<Void> restoreRes = restTemplate.exchange(
+                "/api/users/me/password",
+                HttpMethod.POST,
+                new HttpEntity<>(restore, newHeaders),
+                Void.class);
+        assertThat(restoreRes.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+
+        PasswordChangeRequest wrongCurrent = new PasswordChangeRequest("incorrecta", "otraClave!123");
+        ResponseEntity<String> badChange = restTemplate.exchange(
+                "/api/users/me/password",
+                HttpMethod.POST,
+                new HttpEntity<>(wrongCurrent, headers),
+                String.class);
+        assertThat(badChange.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
     }
 
     private String obtainAdminToken() {
