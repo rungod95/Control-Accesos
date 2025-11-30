@@ -23,10 +23,10 @@ public interface AccessLogRepository extends JpaRepository<AccessLog, Long> {
 
     @Query("""
             select a from AccessLog a
-            where (:desde is null or a.fechaHoraEntrada >= :desde)
-              and (:hasta is null or a.fechaHoraEntrada <= :hasta)
-              and (:tipo is null or lower(a.tipoUsuario) = :tipo)
-              and (:qr is null or lower(a.qrCode) like lower(concat('%', :qr, '%')))
+            where a.fechaHoraEntrada >= :desde
+              and a.fechaHoraEntrada <= :hasta
+              and (:tipo = '' or lower(a.tipoUsuario) = :tipo)
+              and (:qr = '' or lower(a.qrCode) like lower(concat('%', :qr, '%')))
             order by a.fechaHoraEntrada desc
             """)
     List<AccessLog> search(
