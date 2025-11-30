@@ -6,6 +6,7 @@ public record UserAccountUpdateRequest(
         @NotBlank(message = "role es obligatorio")
         String role,
         String fullName,
-        String password
+        String password,
+        String qrCode
 ) {
 }

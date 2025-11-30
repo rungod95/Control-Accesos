@@ -5,6 +5,7 @@ public record UserAccountResponse(
         String username,
         String fullName,
         String role,
-        boolean enabled
+        boolean enabled,
+        String qrCode
 ) {
 }

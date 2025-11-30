@@ -23,3 +23,7 @@ export function registerAccess(payload) {
 export function closeAccess(id, payload) {
   return http.put(`/api/accesos/${id}`, payload).then((res) => res.data);
 }
+
+export function scanVisitor(qrCode) {
+  return http.post('/api/accesos/visitas/scan', { qrCode }).then((res) => res.data);
+}

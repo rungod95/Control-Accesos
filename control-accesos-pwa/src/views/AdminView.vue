@@ -1,10 +1,17 @@
 <script setup>
-import { ref, watch } from 'vue';
+import { ref, watch, computed } from 'vue';
 import RoleSection from '../components/RoleSection.vue';
-import { fetchUsers } from '../services/userService';
+import UserQrCard from '../components/UserQrCard.vue';
+import { fetchUsers, updateUser, createUser, deleteUser } from '../services/userService';
 import { fetchActive, closeAccess } from '../services/accessLogService';
 import { useSession } from '../stores/session';
 import { useUi } from '../stores/ui';
+
+const roleOptions = [
+  { value: 'VISITANTE', label: 'Visitante' },
+  { value: 'TRABAJADOR', label: 'Trabajador' },
+  { value: 'ADMIN', label: 'Admin' },
+];
 
 const actions = [
   'Gestión de usuarios, roles y permisos',
@@ -22,6 +29,29 @@ const users = ref([]);
 const activeAccesses = ref([]);
 const loading = ref(false);
 const error = ref('');
+const editingUserId = ref(null);
+const editingUserDraft = ref({
+  fullName: '',
+  role: 'VISITANTE',
+  qrCode: '',
+  password: '',
+});
+const savingUserId = ref(null);
+const deletingUserId = ref(null);
+const userForm = ref({
+  fullName: '',
+  username: '',
+  qrCode: '',
+  role: 'VISITANTE',
+});
+const creatingVisitor = ref(false);
+const lastCreated = ref(null);
+
+const isVisitor = computed(() => userForm.value.role === 'VISITANTE');
+const createCta = computed(() => {
+  const label = roleOptions.find((r) => r.value === userForm.value.role)?.label ?? 'usuario';
+  return `Crear ${label.toLowerCase()}`;
+});
 
 const session = useSession();
 const ui = useUi();
@@ -61,12 +91,132 @@ watch(
 );
 
 async function handleClose(id) {
+  const access = activeAccesses.value.find((item) => item.id === id);
+  if (!access) {
+    ui.notifyWarning('No se encontró el acceso seleccionado.');
+    return;
+  }
   try {
-    await closeAccess(id, { fechaHoraSalida: new Date().toISOString() });
+    const body = {
+      ...access,
+      fechaHoraSalida: new Date().toISOString(),
+    };
+    await closeAccess(id, body);
     ui.notifySuccess('Acceso cerrado');
     await loadData({ silent: true });
   } catch (err) {
     ui.notifyError('No se pudo cerrar el acceso');
+  }
+}
+
+function startEditUser(user) {
+  editingUserId.value = user.id;
+  editingUserDraft.value = {
+    fullName: user.fullName || '',
+    role: user.role,
+    qrCode: user.qrCode || '',
+    password: '',
+  };
+}
+
+function cancelEditUser() {
+  editingUserId.value = null;
+  editingUserDraft.value = { fullName: '', role: 'VISITANTE', qrCode: '', password: '' };
+}
+
+async function saveUser(user) {
+  const payload = {
+    role: editingUserDraft.value.role || user.role,
+    fullName: editingUserDraft.value.fullName,
+    password: editingUserDraft.value.password || null,
+    qrCode: editingUserDraft.value.qrCode || null,
+  };
+  savingUserId.value = user.id;
+  try {
+    const updated = await updateUser(user.id, payload);
+    user.fullName = updated.fullName;
+    user.role = updated.role;
+    user.qrCode = updated.qrCode;
+    ui.notifySuccess(`Usuario ${user.username} actualizado`);
+    cancelEditUser();
+  } catch (err) {
+    ui.notifyError('No se pudo actualizar el usuario');
+  } finally {
+    savingUserId.value = null;
+  }
+}
+
+async function removeUser(userId) {
+  const confirmDelete = window.confirm('¿Eliminar este usuario?');
+  if (!confirmDelete) return;
+
+  deletingUserId.value = userId;
+  try {
+    await deleteUser(userId);
+    users.value = users.value.filter((u) => u.id !== userId);
+    if (editingUserId.value === userId) {
+      cancelEditUser();
+    }
+    ui.notifySuccess('Usuario eliminado');
+  } catch (err) {
+    ui.notifyError('No se pudo eliminar el usuario');
+  } finally {
+    deletingUserId.value = null;
+  }
+}
+
+function slugify(value) {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '')
+    || 'visitante';
+}
+
+function randomSuffix() {
+  return Math.random().toString(36).slice(2, 6);
+}
+
+async function handleCreateUser() {
+  if (!userForm.value.fullName) {
+    ui.notifyWarning('Introduce el nombre del usuario.');
+    return;
+  }
+  creatingVisitor.value = true;
+  try {
+    const usernameBase = userForm.value.username || slugify(userForm.value.fullName);
+    const username = `${usernameBase}-${randomSuffix()}`;
+    const password = `usr-${randomSuffix()}${Math.floor(Date.now() % 100)}`;
+    const qrCode = (userForm.value.qrCode || `QR-${usernameBase}`)
+      .replace(/\s+/g, '-')
+      .toUpperCase();
+
+    const payload = {
+      username,
+      password,
+      role: userForm.value.role || 'VISITANTE',
+      fullName: userForm.value.fullName,
+      qrCode,
+    };
+    const created = await createUser(payload);
+    users.value.push(created);
+    lastCreated.value = {
+      username: payload.role === 'VISITANTE' ? '' : payload.username,
+      password: payload.role === 'VISITANTE' ? '' : payload.password,
+      qrCode,
+      fullName: created.fullName,
+      role: payload.role,
+    };
+    userForm.value.fullName = '';
+    userForm.value.username = '';
+    userForm.value.qrCode = '';
+    userForm.value.role = 'VISITANTE';
+    ui.notifySuccess(`Usuario '${created.fullName}' creado con rol ${payload.role} y QR ${qrCode}`);
+  } catch (err) {
+    const message = err.response?.data?.error ?? 'No se pudo crear el usuario';
+    ui.notifyError(message);
+  } finally {
+    creatingVisitor.value = false;
   }
 }
 </script>
@@ -81,13 +231,61 @@ async function handleClose(id) {
     :checklist="checklist"
   />
 
+  <section class="admin-table visitor-card">
+    <h3>Crear usuario / QR</h3>
+    <form class="visitor-form" @submit.prevent="handleCreateUser">
+      <label>
+        Nombre completo
+        <input v-model="userForm.fullName" placeholder="Nombre Apellido" required />
+      </label>
+      <div class="roles">
+        <button
+          v-for="option in roleOptions"
+          :key="option.value"
+          type="button"
+          class="role-chip"
+          :class="{ active: userForm.role === option.value }"
+          @click="userForm.role = option.value"
+        >
+          {{ option.label }}
+        </button>
+      </div>
+      <label v-if="!isVisitor">
+        Identificador interno (opcional)
+        <input
+          v-model="userForm.username"
+          placeholder="usuario-corporativo"
+        />
+      </label>
+      <p v-else class="helper">
+        El usuario y contraseña se generan automáticamente para visitantes.
+      </p>
+      <label>
+        QR personalizado (opcional)
+        <input v-model="userForm.qrCode" placeholder="QR-USER-001" />
+      </label>
+      <button type="submit" class="create-btn" :disabled="creatingVisitor">
+        {{ creatingVisitor ? 'Generando...' : createCta }}
+      </button>
+    </form>
+    <div v-if="lastCreated" class="visitor-summary">
+      <p><strong>Último usuario creado</strong></p>
+      <p>Nombre: {{ lastCreated.fullName }}</p>
+      <p>Rol: {{ lastCreated.role }}</p>
+      <p v-if="lastCreated.username">Usuario: <code>{{ lastCreated.username }}</code></p>
+      <p v-if="lastCreated.password">Contraseña temporal: <code>{{ lastCreated.password }}</code></p>
+      <p>QR asignado: <code>{{ lastCreated.qrCode }}</code></p>
+      <UserQrCard
+        :value="lastCreated.qrCode"
+        :label="`QR · ${lastCreated.fullName}`"
+        :download-name="`qr-${lastCreated.username}.png`"
+      />
+    </div>
+  </section>
+
   <section class="admin-table">
     <div class="toolbar" v-if="session.isAuthenticated.value">
       <button type="button" @click="loadData()">Actualizar datos</button>
-      <button type="button" @click="flushQueue(sendAccess)">
-        Sincronizar pendientes
-        <span v-if="offlineQueue.state.pending.length" class="badge">{{ offlineQueue.state.pending.length }}</span>
-      </button>
     </div>
     <p v-if="loading">Cargando usuarios...</p>
     <p v-else-if="error" class="error">{{ error }}</p>
@@ -99,17 +297,76 @@ async function handleClose(id) {
           <th>Nombre</th>
           <th>Rol</th>
           <th>Estado</th>
+          <th>QR</th>
+          <th>Acciones</th>
         </tr>
       </thead>
       <tbody>
         <tr v-for="user in users" :key="user.id">
           <td>{{ user.username }}</td>
-          <td>{{ user.fullName || 'Sin nombre' }}</td>
-          <td class="badge">{{ user.role }}</td>
+          <td>
+            <template v-if="editingUserId === user.id">
+              <input v-model="editingUserDraft.fullName" placeholder="Nombre Apellido" />
+            </template>
+            <template v-else>
+              {{ user.fullName || 'Sin nombre' }}
+            </template>
+          </td>
+          <td>
+            <template v-if="editingUserId === user.id">
+              <select v-model="editingUserDraft.role">
+                <option v-for="option in roleOptions" :key="option.value" :value="option.value">
+                  {{ option.label }}
+                </option>
+              </select>
+            </template>
+            <template v-else>
+              <span class="badge">{{ user.role }}</span>
+            </template>
+          </td>
           <td>
             <span :class="user.enabled ? 'pill success' : 'pill danger'">
               {{ user.enabled ? 'Activo' : 'Bloqueado' }}
             </span>
+          </td>
+          <td>
+            <div v-if="editingUserId === user.id" class="qr-editor">
+              <input v-model="editingUserDraft.qrCode" placeholder="QR-USER-001" />
+            </div>
+            <div v-else class="qr-display">
+              <span>{{ user.qrCode || '—' }}</span>
+            </div>
+          </td>
+          <td class="actions">
+            <div v-if="editingUserId === user.id" class="row-actions">
+              <input
+                v-model="editingUserDraft.password"
+                placeholder="Resetear contraseña (opcional)"
+                type="password"
+              />
+              <div class="qr-actions">
+                <button
+                  type="button"
+                  class="save-btn"
+                  :disabled="savingUserId === user.id"
+                  @click="saveUser(user)"
+                >
+                  {{ savingUserId === user.id ? 'Guardando...' : 'Guardar' }}
+                </button>
+                <button type="button" class="link-btn" @click="cancelEditUser">Cancelar</button>
+              </div>
+            </div>
+            <div v-else class="row-actions">
+              <button type="button" class="link-btn" @click="startEditUser(user)">Editar</button>
+              <button
+                type="button"
+                class="danger-btn"
+                :disabled="deletingUserId === user.id"
+                @click="removeUser(user.id)"
+              >
+                {{ deletingUserId === user.id ? 'Eliminando...' : 'Eliminar' }}
+              </button>
+            </div>
           </td>
         </tr>
       </tbody>
@@ -212,6 +469,148 @@ tbody tr {
 .pill.danger {
   background: rgba(248, 113, 113, 0.2);
   color: #fecaca;
+}
+
+.qr-display {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.qr-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.qr-editor input {
+  width: 100%;
+  padding: 0.4rem 0.6rem;
+  border-radius: 0.5rem;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  background: rgba(15, 23, 42, 0.4);
+  color: inherit;
+}
+
+.row-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.actions {
+  min-width: 200px;
+}
+
+.actions input,
+.actions select,
+.row-actions input,
+.row-actions select {
+  width: 100%;
+  padding: 0.4rem 0.6rem;
+  border-radius: 0.5rem;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  background: rgba(15, 23, 42, 0.4);
+  color: inherit;
+}
+
+.qr-actions {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.save-btn {
+  border: 1px solid rgba(34, 197, 94, 0.6);
+  color: #bbf7d0;
+  background: transparent;
+  padding: 0.3rem 0.6rem;
+  border-radius: 0.6rem;
+}
+
+.link-btn {
+  border: none;
+  background: transparent;
+  color: #93c5fd;
+  cursor: pointer;
+}
+
+.danger-btn {
+  border: 1px solid rgba(248, 113, 113, 0.6);
+  background: transparent;
+  color: #fecaca;
+  padding: 0.3rem 0.6rem;
+  border-radius: 0.6rem;
+  cursor: pointer;
+}
+
+.helper {
+  font-size: 0.9rem;
+  color: var(--muted-color);
+  margin: 0;
+}
+
+.visitor-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.visitor-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 0.8rem;
+}
+
+.visitor-form input {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.65rem;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  background: rgba(15, 23, 42, 0.5);
+  color: inherit;
+}
+
+.visitor-summary {
+  border: 1px dashed rgba(148, 163, 184, 0.35);
+  border-radius: 0.8rem;
+  padding: 0.8rem 1rem;
+  font-size: 0.9rem;
+  background: rgba(15, 23, 42, 0.4);
+}
+
+.create-btn {
+  border: none;
+  border-radius: 0.8rem;
+  background: linear-gradient(135deg, #34d399, #0ea5e9);
+  color: #0f172a;
+  font-weight: 600;
+  padding: 0.6rem 1rem;
+  cursor: pointer;
+}
+
+.create-btn:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.roles {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.role-chip {
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  background: rgba(15, 23, 42, 0.4);
+  color: inherit;
+  padding: 0.35rem 0.8rem;
+  border-radius: 0.8rem;
+  cursor: pointer;
+}
+
+.role-chip.active {
+  border-color: rgba(59, 130, 246, 0.7);
+  background: rgba(59, 130, 246, 0.15);
 }
 
 .close-btn {

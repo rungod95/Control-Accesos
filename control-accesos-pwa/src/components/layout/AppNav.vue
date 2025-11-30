@@ -1,19 +1,36 @@
 <script setup>
+import { computed } from 'vue';
 import { RouterLink, useRoute } from 'vue-router';
+import { session } from '../../stores/session';
 
 const route = useRoute();
 
-const links = [
-  { path: '/', label: 'Inicio', subtitle: 'Resumen general', emoji: '🏠' },
-  { path: '/qr', label: 'Visitante', subtitle: 'QR temporal', emoji: '👋' },
+const ROLE_HOME = {
+  ADMIN: { path: '/admin', label: 'Admin', subtitle: 'Usuarios y accesos', emoji: '🧭' },
+  TRABAJADOR: { path: '/trabajador', label: 'Trabajador', subtitle: 'Mi QR', emoji: '🦺' },
+};
+
+const publicLinks = [
+  { path: '/qr', label: 'QR', subtitle: 'Escanear código', emoji: '👋' },
   { path: '/login', label: 'Acceso', subtitle: 'Autenticación', emoji: '🔐' },
 ];
+
+const links = computed(() => {
+  if (route.path === '/') {
+    return [];
+  }
+  if (!session.isAuthenticated.value) {
+    return publicLinks;
+  }
+  const roleLink = ROLE_HOME[session.role.value] ? [ROLE_HOME[session.role.value]] : [];
+  return [...roleLink, { path: '/qr', label: 'QR', subtitle: 'Escanear código', emoji: '👋' }];
+});
 
 const isActive = (target) => route.path === target;
 </script>
 
 <template>
-  <nav class="app-nav">
+  <nav v-if="links.length" class="app-nav">
     <RouterLink
       v-for="link in links"
       :key="link.path"
@@ -28,6 +45,7 @@ const isActive = (target) => route.path === target;
       </span>
     </RouterLink>
   </nav>
+  <div v-else class="app-nav-spacer" aria-hidden="true"></div>
 </template>
 
 <style scoped>
@@ -73,5 +91,9 @@ const isActive = (target) => route.path === target;
 
 small {
   color: var(--muted-color);
+}
+
+.app-nav-spacer {
+  height: 1rem;
 }
 </style>

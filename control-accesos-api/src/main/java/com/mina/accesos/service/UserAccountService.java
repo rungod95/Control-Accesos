@@ -31,7 +31,12 @@ public class UserAccountService {
                 .orElseThrow(() -> new NotFoundException("Usuario no encontrado: " + username));
     }
 
-    public UserAccount createUser(String username, String rawPassword, Role role, String fullName) {
+    public UserAccount findByQrCode(String qrCode) {
+        return repository.findByQrCodeIgnoreCase(qrCode)
+                .orElseThrow(() -> new NotFoundException("QR no asociado a ningún usuario: " + qrCode));
+    }
+
+    public UserAccount createUser(String username, String rawPassword, Role role, String fullName, String qrCode) {
         if (repository.existsByUsername(username)) {
             throw new IllegalArgumentException("Ya existe un usuario con username " + username);
         }
@@ -41,13 +46,17 @@ public class UserAccountService {
         user.setRole(role);
         user.setFullName(fullName);
         user.setEnabled(true);
+        user.setQrCode(StringUtils.hasText(qrCode) ? qrCode.trim() : null);
         return repository.save(user);
     }
 
-    public UserAccount updateUser(Long id, String fullName, Role role, String rawPassword) {
+    public UserAccount updateUser(Long id, String fullName, Role role, String rawPassword, String qrCode) {
         UserAccount current = findById(id);
         current.setFullName(fullName);
         current.setRole(role);
+        if (qrCode != null) {
+            current.setQrCode(StringUtils.hasText(qrCode) ? qrCode.trim() : null);
+        }
         if (StringUtils.hasText(rawPassword)) {
             current.setPassword(passwordEncoder.encode(rawPassword));
         }
@@ -56,5 +65,17 @@ public class UserAccountService {
 
     public void deleteUser(Long id) {
         repository.deleteById(id);
+    }
+
+    public void changeOwnPassword(String username, String currentPassword, String newPassword) {
+        UserAccount user = findByUsername(username);
+        if (!passwordEncoder.matches(currentPassword, user.getPassword())) {
+            throw new IllegalArgumentException("Contraseña actual incorrecta");
+        }
+        if (!StringUtils.hasText(newPassword) || newPassword.length() < 6) {
+            throw new IllegalArgumentException("La nueva contraseña debe tener al menos 6 caracteres");
+        }
+        user.setPassword(passwordEncoder.encode(newPassword));
+        repository.save(user);
     }
 }

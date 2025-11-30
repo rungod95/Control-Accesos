@@ -1,11 +1,20 @@
 <script setup>
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { session } from '../../stores/session';
 import { logout } from '../../services/authService';
+import { offlineQueue, flushQueue } from '../../stores/offlineQueue';
+import { processAccessEntry } from '../../services/offlineSyncService';
 
 const router = useRouter();
-const userLabel = computed(() => session.username.value || 'Invitado');
+const userLabel = computed(() => session.fullName.value || session.username.value || 'Invitado');
+const pendingCount = computed(() => offlineQueue.state.pending.length);
+const hasPending = computed(() => pendingCount.value > 0);
+const syncing = ref(false);
+
+function goHome() {
+  router.push({ path: '/' });
+}
 
 function handleLogout() {
   logout();
@@ -15,19 +24,39 @@ function handleLogout() {
 function goLogin() {
   router.push({ name: 'login' });
 }
+
+async function handleSync() {
+  if (!hasPending.value || syncing.value) {
+    return;
+  }
+  syncing.value = true;
+  try {
+    await flushQueue(processAccessEntry);
+  } finally {
+    syncing.value = false;
+  }
+}
 </script>
 
 <template>
   <header class="app-header">
-    <div>
+    <button class="brand" type="button" @click="goHome">
       <p class="app-subtitle">Control de accesos a las instalaciones</p>
       <h1>ACELOR S.A</h1>
-
-    </div>
+    </button>
     <div class="header-actions">
       <div class="app-tag">
         <span>PWA Ready</span>
       </div>
+      <button
+        v-if="session.isAuthenticated.value"
+        type="button"
+        class="sync-btn"
+        :disabled="!hasPending || syncing"
+        @click="handleSync"
+      >
+        {{ hasPending ? `Sincronizar (${pendingCount})` : 'Sin pendientes' }}
+      </button>
       <div class="session-panel" v-if="session.isAuthenticated.value">
         <span class="user-chip">🔐 {{ userLabel }}</span>
         <button type="button" @click="handleLogout">Salir</button>
@@ -41,13 +70,22 @@ function goLogin() {
 </template>
 
 <style scoped>
- .app-header {
+.app-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 1.5rem;
   padding-block: 1.5rem;
   border-bottom: 1px solid var(--border-color);
+}
+
+.brand {
+  background: transparent;
+  border: none;
+  padding: 0;
+  text-align: left;
+  color: inherit;
+  cursor: pointer;
 }
 
 .app-subtitle {
@@ -95,6 +133,20 @@ h1 {
   padding: 0.3rem 0.8rem;
   border-radius: 999px;
   background: rgba(148, 163, 184, 0.15);
+}
+
+.sync-btn {
+  background: transparent;
+  border: 1px solid rgba(59, 130, 246, 0.5);
+  color: #bfdbfe;
+  padding: 0.35rem 0.75rem;
+  border-radius: 0.6rem;
+  cursor: pointer;
+}
+
+.sync-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 button {

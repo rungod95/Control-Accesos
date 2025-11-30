@@ -29,6 +29,14 @@ mvn spring-boot:run -Dspring-boot.run.profiles=prod
 - `PUT    /api/accesos/{id}` – actualizar
 - `DELETE /api/accesos/{id}` – borrar
 
+### Autenticación
+- `POST /auth/login` – devuelve un JWT de acceso (1h) y un refresh token (14 días).
+- `POST /auth/refresh` – recibe `{ "refreshToken": "..." }` y entrega un nuevo par de tokens sin pedir credenciales.
+- `GET /api/users/me` – datos del usuario autenticado (username, rol, nombre y QR asignado).
+- `POST /api/accesos/visitas/scan` – endpoint público para visitantes; recibe `{ "qrCode": "QR-XXX" }` y alterna entrada/salida según si ya tenía acceso abierto.
+
+> Ambos tokens se firman con `jwt.secret`. Ajusta `jwt.expiration` (ms) y `jwt.refresh-expiration` (ms) en `application-*.properties` para definir su vigencia.
+
 ### Ejemplo POST
 ```json
 {
@@ -38,6 +46,10 @@ mvn spring-boot:run -Dspring-boot.run.profiles=prod
   "qrCode": "QR-VM-003"
 }
 ```
+
+## Documentación OpenAPI
+- Swagger UI: http://localhost:8080/swagger-ui.html (perfil dev/prod).
+- JSON OpenAPI: http://localhost:8080/v3/api-docs
 
 ## Git (sugerido)
 ```bash

@@ -2,6 +2,8 @@ package com.mina.accesos.controller;
 
 import com.mina.accesos.domain.AccessLog;
 import com.mina.accesos.dto.AccessSummaryResponse;
+import com.mina.accesos.dto.VisitScanRequest;
+import com.mina.accesos.dto.VisitScanResponse;
 import com.mina.accesos.service.AccessLogService;
 import jakarta.validation.Valid;
 import java.time.LocalDateTime;
@@ -34,10 +36,10 @@ public class AccessLogController {
 
     @GetMapping
     public List<AccessLog> findAll(
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime desde,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime hasta,
-            @RequestParam(required = false) String tipoUsuario,
-            @RequestParam(required = false) String qr) {
+            @RequestParam(name = "desde", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime desde,
+            @RequestParam(name = "hasta", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime hasta,
+            @RequestParam(name = "tipoUsuario", required = false) String tipoUsuario,
+            @RequestParam(name = "qr", required = false) String qr) {
         if (desde != null || hasta != null || tipoUsuario != null || qr != null) {
             return service.search(desde, hasta, tipoUsuario, qr);
         }
@@ -45,7 +47,7 @@ public class AccessLogController {
     }
 
     @GetMapping("/{id}")
-    public AccessLog findById(@PathVariable Long id) {
+    public AccessLog findById(@PathVariable("id") Long id) {
         return service.findById(id);
     }
 
@@ -55,7 +57,7 @@ public class AccessLogController {
     }
 
     @GetMapping("/ultimos")
-    public List<AccessLog> ultimos(@RequestParam(defaultValue = "10") int limit) {
+    public List<AccessLog> ultimos(@RequestParam(name = "limit", defaultValue = "10") int limit) {
         return service.findRecent(limit);
     }
 
@@ -71,13 +73,18 @@ public class AccessLogController {
     }
 
     @PutMapping("/{id}")
-    public AccessLog update(@PathVariable Long id, @Valid @RequestBody AccessLog accessLog) {
+    public AccessLog update(@PathVariable("id") Long id, @Valid @RequestBody AccessLog accessLog) {
         return service.update(id, accessLog);
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void delete(@PathVariable Long id) {
+    public void delete(@PathVariable("id") Long id) {
         service.delete(id);
+    }
+
+    @PostMapping("/visitas/scan")
+    public VisitScanResponse scanVisit(@Valid @RequestBody VisitScanRequest request) {
+        return service.scanVisitor(request.qrCode());
     }
 }
