@@ -69,8 +69,8 @@ public class AccessLogService {
     }
 
     public List<AccessLog> search(LocalDateTime desde, LocalDateTime hasta, String tipoUsuario, String qrCode) {
-        LocalDateTime from = desde != null ? desde : LocalDateTime.MIN;
-        LocalDateTime to = hasta != null ? hasta : LocalDateTime.MAX;
+        LocalDateTime from = desde != null ? desde : LocalDate.now().minusYears(10).atStartOfDay();
+        LocalDateTime to = hasta != null ? hasta : LocalDate.now().plusYears(10).atTime(23, 59, 59);
         String normalizedTipo = StringUtils.hasText(tipoUsuario) ? tipoUsuario.toLowerCase(Locale.ROOT) : "";
         String normalizedQr = StringUtils.hasText(qrCode) ? qrCode.trim() : "";
         return repository.search(from, to, normalizedTipo, normalizedQr);
