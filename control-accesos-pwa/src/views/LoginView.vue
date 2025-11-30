@@ -92,9 +92,42 @@ watch(
         <button
           type="button"
           class="toggle"
+          :aria-label="showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'"
           @click="showPassword = !showPassword"
         >
-          {{ showPassword ? 'Ocultar' : 'Ver' }}
+          <svg
+            v-if="!showPassword"
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+            <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2" />
+          </svg>
+          <svg
+            v-else
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M3 3l18 18M10.477 10.485A3 3 0 0013.5 13.5m-5.853 2.647C5.134 15.437 3.5 13.5 3.5 13.5s4-7 10-7c1.4 0 2.662.353 3.782.898M14.121 9.88a3 3 0 00-3.999 3.999"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
         </button>
       </label>
 
@@ -157,7 +190,9 @@ input {
   background: transparent;
   color: #bfdbfe;
   cursor: pointer;
-  font-size: 0.9rem;
+  padding: 0.1rem;
+  display: flex;
+  align-items: center;
 }
 
 button {
