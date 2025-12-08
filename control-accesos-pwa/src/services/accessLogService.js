@@ -1,0 +1,29 @@
+import { http } from './http';
+
+export function fetchSummary() {
+  return http.get('/api/accesos/estadisticas').then((res) => res.data);
+}
+
+export function fetchActive() {
+  return http.get('/api/accesos/activos').then((res) => res.data);
+}
+
+export function fetchRecent(limit = 10) {
+  return http.get('/api/accesos/ultimos', { params: { limit } }).then((res) => res.data);
+}
+
+export function searchAccessLogs(filters = {}) {
+  return http.get('/api/accesos', { params: filters }).then((res) => res.data);
+}
+
+export function registerAccess(payload) {
+  return http.post('/api/accesos', payload).then((res) => res.data);
+}
+
+export function closeAccess(id, payload) {
+  return http.put(`/api/accesos/${id}`, payload).then((res) => res.data);
+}
+
+export function scanVisitor(qrCode) {
+  return http.post('/api/accesos/visitas/scan', { qrCode }).then((res) => res.data);
+}

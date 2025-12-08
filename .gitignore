@@ -1,0 +1,16 @@
+# IDE
+.idea/
+*.iml
+
+# Maven / Spring
+control-accesos-api/target/
+
+# Node / Vite
+control-accesos-pwa/node_modules/
+control-accesos-pwa/dist/
+
+# Docs
+documentos/
+
+# Logs
+*.log
