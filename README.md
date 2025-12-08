@@ -47,4 +47,4 @@ Requisitos: Docker + Docker Compose.
 - API: `control-accesos-api/README.md`
 - PWA: `control-accesos-pwa/README.md`
 
-Consulta `README_PROGRESS.md` para ver en qué rama y tareas estamos trabajando y `AGENTS.md` para las guías internas del repo.
+
