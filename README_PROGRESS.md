@@ -1,34 +1,33 @@
 # Work In Progress Notes
 
 ## Current Branch
-- `feature/pwa-shell` (trabajo activo en la PWA: sesión persistente + QR personal por usuario)
+- `develop` (chore/postgres-docker mergeada)
 - Ramas integradas recientemente:
-  - `feature/pwa-shell` (estructura monorepo + PWA shell) → mergeada en `develop`
-  - `feature/integration-tests-v2` (suite de integración auth/usuarios/analytics) → mergeada en `develop`
-  - `chore/pom-plugin-versions` (fijar versiones de plugins Maven) → mergeada en `develop`
+  - `chore/tests-access-logs` (tests de estadisticas/ultimos + password change) → mergeada en `develop`
+  - `chore/postgres-docker` (Dockerfiles API/PWA, compose con Postgres, ajustes search/seed) → mergeada en `develop`
 - Latest successful commands:
-  - Backend: `cd control-accesos-api && mvn spring-boot:run -Dspring-boot.run.profiles=dev`
   - Backend tests: `cd control-accesos-api && mvn test`
-  - Frontend: `cd control-accesos-pwa && npm run build`
+  - Frontend build: `cd control-accesos-pwa && npm run build`
+  - Stack Docker: `docker compose up -d --build`
 
 ## Completed Recently
-- Sesión persistente con access/refresh tokens; wiring completo en PWA para renovar tokens y mantener usuario logueado.
-- Campo `qrCode` añadido a `user_account`, seeds y DTOs; `/auth/login`, `/auth/refresh` y `/api/users/me` devuelven username/rol/nombre/QR.
-- Worker view actualizada: muestra QR gráfico descargable, precarga su código y puede registrar entrada/salida sin reescribirlo.
-- Generador de visitantes en `/admin`: crea usuario VISITANTE + QR y muestra PNG descargable; hook de cámara recuerda dispositivo y limpia streams al navegar.
-- Endpoint público `POST /api/accesos/visitas/scan` que alterna entrada/salida según QR; GuestView lo usa para validar la visita y mostrar instrucciones de seguridad.
+- Docker-compose con Postgres 16 + API + PWA (puertos 5432/8080/5173), Dockerfiles para backend/frontend.
+- Prod apunta a Postgres (dialecto/driver), seeds idempotentes; búsqueda de accesos con rangos seguros para Postgres.
+- Tests ampliados: estadisticas/ultimos accesos, cambio de contraseña propio, fixtures de test.
+- PWA: botón de QR del trabajador con mejor contraste; toggle de ojo para ver/ocultar contraseña en login; se eliminaron bloques de “Flujos clave / Checklist” de las vistas.
+- PWA apuntando a API `http://localhost:8080` por defecto en build docker; README con guía rápida de Compose.
 
 ## Pending Actions
-- Ajustar navegación por rol una vez autenticado (revisar guardas para operadores).
-- Badge offline global (sincronización manual en header) y estado persistente.
-- Añadir expiración/revocación de QRs y flujo de compartición segura.
-- Export/report endpoints y preparación migración a PostgreSQL (Docker Compose).
-- Revisar por qué `mvn test` informa `Tests run: 0` y recuperar la suite de integración.
+- Frontend: badge offline/sync, guardas de router por rol pulidas.
+- Backend/PWA: expiración/revocación de QRs, endpoints de export/report.
+- Docs: README API (OpenAPI) pendiente de completar.
+- Opcional: empaquetado ZIP (JAR + dist) para compartir sin Docker.
 
 ## Quick Commands
-- Backend (dev profile): `cd control-accesos-api && mvn spring-boot:run -Dspring-boot.run.profiles=dev`
-- Frontend: `cd control-accesos-pwa && npm run dev` (usar `nvm use 22`)
+- Docker stack: `docker compose up -d --build`
+- Backend (dev profile H2): `cd control-accesos-api && mvn spring-boot:run -Dspring-boot.run.profiles=dev`
 - Tests API: `cd control-accesos-api && mvn test`
+- Frontend: `cd control-accesos-pwa && nvm use 22 && npm run dev`
 - Build PWA: `cd control-accesos-pwa && npm run build`
 
 ## Credentials / Seeds (dev)

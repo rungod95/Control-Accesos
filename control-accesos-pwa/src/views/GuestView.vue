@@ -5,18 +5,6 @@ import { useQrScanner } from '../composables/useQrScanner';
 import { scanVisitor } from '../services/accessLogService';
 import { useUi } from '../stores/ui';
 
-const actions = [
-  'Escanear o introducir manualmente el QR recibido (visitante o personal)',
-  'Leer instrucciones de seguridad antes de entrar',
-  'Mostrar código QR en modo alto contraste',
-];
-
-const checklist = [
-  'No requiere autenticación',
-  'Funciona online y permite entrada/salida con el mismo QR',
-  'Redirección automática al panel del operador tras validar',
-];
-
 const code = ref('');
 const {
   videoInputDevices,
@@ -88,8 +76,6 @@ onMounted(() => {
     emoji="👋"
     description="Escanea o introduce un QR para registrar entrada/salida. Úsalo con QRs de visitantes o personal."
     access-type="Público"
-    :actions="actions"
-    :checklist="checklist"
   />
 
   <section class="guest-card">

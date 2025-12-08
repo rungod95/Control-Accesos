@@ -13,18 +13,6 @@ const roleOptions = [
   { value: 'ADMIN', label: 'Admin' },
 ];
 
-const actions = [
-  'Gestión de usuarios, roles y permisos',
-  'Generación de QR (permanentes y temporales)',
-  'Consulta de auditorías e integración con backend',
-];
-
-const checklist = [
-  'Soporte para CRUD completo vía API REST',
-  'Filtros por perfil, estado y fecha',
-  'Bloqueo/Reset de contraseñas',
-];
-
 const users = ref([]);
 const activeAccesses = ref([]);
 const loading = ref(false);
@@ -227,8 +215,6 @@ async function handleCreateUser() {
     emoji="🧭"
     description="Backoffice central donde se configuran perfiles, se emiten QR y se revisan los registros históricos."
     access-type="Autenticado"
-    :actions="actions"
-    :checklist="checklist"
   />
 
   <section class="admin-table visitor-card">

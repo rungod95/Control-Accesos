@@ -7,17 +7,6 @@ import { useSession } from '../stores/session';
 import { useUi } from '../stores/ui';
 import { changePassword } from '../services/accountService';
 
-const actions = [
-  'Login JWT y refresco del token',
-  'Descarga y uso de su QR personal',
-  'Ver su historial de accesos reciente',
-];
-
-const checklist = [
-  'Mostrar QR asignado siempre disponible',
-  'Historial resumido de las últimas visitas',
-];
-
 const recent = ref([]);
 const loading = ref(false);
 const error = ref('');
@@ -131,8 +120,6 @@ async function handlePasswordChange() {
     emoji="🦺"
     description="Pantalla pensada para operarios internos: al iniciar sesión ven el lector de QR y un resumen de su estado actual."
     access-type="Autenticado"
-    :actions="actions"
-    :checklist="checklist"
   />
 
   <section class="worker-registration" v-if="session.isAuthenticated.value">
